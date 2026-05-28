@@ -10,10 +10,9 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node10",
+    "moduleResolution": "node",
     "declaration": false,
-    "sourceMap": true,
-    "ignoreDeprecations": "6.0"
+    "sourceMap": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
