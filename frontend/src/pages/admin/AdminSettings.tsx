@@ -15,7 +15,7 @@ type TierName = typeof TIER_NAMES[number];
 const TIER_DEFAULTS: Record<TierName, TierDef> = {
     STARTER: { min: 20, max: 999, dailyRoiBps: 150, durationDays: 30 },
     PRO: { min: 1000, max: 4999, dailyRoiBps: 180, durationDays: 45 },
-    ELITE: { min: 5000, max: 99999999, dailyRoiBps: 200, durationDays: 60 },
+    ELITE: { min: 5000, max: 100000, dailyRoiBps: 200, durationDays: 60 },
 };
 
 function TierEditor({
@@ -58,8 +58,8 @@ function TierEditor({
                         type="number"
                         step="1"
                         min="1"
-                        value={value.max === 99999999 ? '' : value.max}
-                        placeholder="∞"
+                        value={value.max ?? ''}
+                        placeholder="e.g. 100000"
                         onChange={(e) => setField('max', e.target.value || '99999999')}
                     />
                 </div>

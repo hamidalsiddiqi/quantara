@@ -13,12 +13,12 @@ import {
 } from 'lucide-react';
 import { formatUSDT, formatDate, roiPercent, daysLeft, progressPct } from '@/lib/utils';
 
-function getRankStatus(volume: number) {
-    if (volume >= 100000) return 'Diamond';
-    if (volume >= 25000) return 'Platinum';
-    if (volume >= 5000) return 'Gold';
-    if (volume >= 1000) return 'Silver';
-    return 'Bronze';
+function getRankInfo(volume: number) {
+    if (volume >= 100000) return { rank: 'Diamond', progressPct: 100, rankFlow: 'Diamond', label: 'Max Rank Reached' };
+    if (volume >= 25000) return { rank: 'Platinum', progressPct: ((volume - 25000) / (100000 - 25000)) * 100, rankFlow: 'Platinum → Diamond', label: `${formatUSDT(100000 - volume)} to Diamond` };
+    if (volume >= 5000) return { rank: 'Gold', progressPct: ((volume - 5000) / (25000 - 5000)) * 100, rankFlow: 'Gold → Platinum', label: `${formatUSDT(25000 - volume)} to Platinum` };
+    if (volume >= 1000) return { rank: 'Silver', progressPct: ((volume - 1000) / (5000 - 1000)) * 100, rankFlow: 'Silver → Gold', label: `${formatUSDT(5000 - volume)} to Gold` };
+    return { rank: 'Bronze', progressPct: (volume / 1000) * 100, rankFlow: 'Bronze → Silver', label: `${formatUSDT(1000 - volume)} to Silver` };
 }
 
 interface StatCardProps {
@@ -27,12 +27,16 @@ interface StatCardProps {
     icon: React.ElementType;
     accent?: boolean;
     subtext?: string;
+    progress?: {
+        value: number;
+        label: string;
+    };
 }
 
-function StatCard({ title, value, icon: Icon, accent }: StatCardProps) {
+function StatCard({ title, value, icon: Icon, accent, progress }: StatCardProps) {
     return (
-        <Card className={`transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${accent ? 'border-blue-600/30 bg-gradient-to-br from-blue-900/40 to-card' : ''}`}>
-            <CardContent className="p-3.5">
+        <Card className={`h-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${accent ? 'border-blue-600/30 bg-gradient-to-br from-blue-900/40 to-card' : ''}`}>
+            <CardContent className="p-3.5 flex flex-col justify-center h-full">
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex-1 min-w-0">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-0.5">{title}</p>
@@ -42,6 +46,15 @@ function StatCard({ title, value, icon: Icon, accent }: StatCardProps) {
                         <Icon className={`h-4 w-4 ${accent ? 'text-cyan-400' : 'text-muted-foreground'}`} />
                     </div>
                 </div>
+                {progress && (
+                    <div className="mt-2.5 space-y-1.5 w-full">
+                        <div className="flex justify-between items-end">
+                            <span className="text-[10px] font-medium text-muted-foreground">{progress.rankFlow}</span>
+                            <span className="text-[9px] font-medium text-cyan-400">Progress: {Math.floor(progress.value)}%</span>
+                        </div>
+                        <Progress value={progress.value} className="h-1.5" />
+                    </div>
+                )}
             </CardContent>
         </Card>
     );
@@ -51,35 +64,38 @@ function CycleCard({ cycle }: { cycle: Cycle }) {
     const pct = progressPct(cycle.daysAccrued, cycle.durationDays);
     const dl = daysLeft(cycle.endsAt);
     const tierColor: Record<string, string> = {
-        STARTER: 'brand',
-        PRO: 'info',
-        ELITE: 'success',
+        STARTER: 'default',
+        PRO: 'secondary',
+        ELITE: 'default',
     };
 
     return (
-        <Card className="hover:border-border/80 transition-colors">
-            <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                        <Badge variant={tierColor[cycle.tier] as any}>{cycle.tier}</Badge>
-                        <span className="text-xs text-muted-foreground">{roiPercent(cycle.dailyRoiBps)}/day</span>
+        <Card className="hover:border-blue-600/30 transition-colors bg-secondary/10">
+            <CardContent className="p-4 space-y-3">
+                <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">Cycle Name</span>
+                        <Badge variant="outline" className="border-blue-600/30 text-cyan-400 bg-blue-600/10 uppercase tracking-widest text-[10px]">{cycle.tier}</Badge>
                     </div>
-                    <span className="text-xs text-muted-foreground">{dl}d left</span>
+                    <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">Investment Amount</span>
+                        <span className="font-bold">{formatUSDT(cycle.principal)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">Daily ROI</span>
+                        <span className="font-bold text-cyan-400">{roiPercent(cycle.dailyRoiBps)}/day</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">Days Remaining</span>
+                        <span className="font-bold">{dl} days</span>
+                    </div>
                 </div>
-                <div className="space-y-1 mb-3">
-                    <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Principal</span>
-                        <span className="font-medium">{formatUSDT(cycle.principal)}</span>
+                <div className="pt-2 border-t border-border/50">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1.5 font-medium">
+                        <span>Progress (Day {cycle.daysAccrued} / {cycle.durationDays})</span>
+                        <span className="text-cyan-400">{pct}%</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Earned so far</span>
-                        <span className="font-medium text-cyan-400">{formatUSDT(cycle.totalAccrued)}</span>
-                    </div>
-                </div>
-                <Progress value={pct} />
-                <div className="flex justify-between text-xs text-muted-foreground mt-1.5">
-                    <span>Day {cycle.daysAccrued} / {cycle.durationDays}</span>
-                    <span>{pct}%</span>
+                    <Progress value={pct} className="h-1.5" />
                 </div>
             </CardContent>
         </Card>
@@ -280,7 +296,7 @@ export default function Dashboard() {
     }
 
     const d = data!;
-    const rank = getRankStatus(parseFloat(d.teamVolume || '0'));
+    const rankInfo = getRankInfo(parseFloat(d.teamVolume || '0'));
 
     const stats = [
         { title: 'Withdrawable Balance', value: formatUSDT(d.withdrawableBalance), icon: Wallet, accent: true, subtext: 'Available to withdraw now' },
@@ -290,7 +306,7 @@ export default function Dashboard() {
         { title: 'Active Cycles', value: String(d.activeCycleCount), icon: RefreshCw, subtext: 'Running investment cycles' },
         { title: 'Referral Earnings', value: formatUSDT(d.referralEarnings), icon: Users, subtext: `Commissions from network` },
         { title: 'Team Volume', value: formatUSDT(d.teamVolume), icon: Target, subtext: 'Total downline deposits' },
-        { title: 'Rank Status', value: rank, icon: Award, subtext: 'Based on team volume' },
+        { title: 'Rank Status', value: rankInfo.rank, icon: Award, progress: { value: rankInfo.progressPct, label: rankInfo.label, rankFlow: rankInfo.rankFlow } },
     ];
 
     return (
@@ -344,6 +360,23 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
+
+            {/* Latest Announcement Banner */}
+            {d.announcements && d.announcements.length > 0 && (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-blue-600/30 bg-blue-900/10 px-4 py-3 shadow-md animate-fade-in relative overflow-hidden">
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-400" />
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-600/20">
+                        <Megaphone className="h-4 w-4 text-cyan-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-semibold text-foreground truncate">{d.announcements[0].title}</h4>
+                        <p className="text-xs text-muted-foreground truncate">{d.announcements[0].message}</p>
+                    </div>
+                    <div className="flex-shrink-0 text-[10px] text-muted-foreground self-start sm:self-center">
+                        {formatDate(d.announcements[0].createdAt)}
+                    </div>
+                </div>
+            )}
 
             {/* Stats grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2.5">
