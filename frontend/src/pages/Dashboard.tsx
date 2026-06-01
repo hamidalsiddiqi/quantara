@@ -30,6 +30,7 @@ interface StatCardProps {
     progress?: {
         value: number;
         label: string;
+        rankFlow?: string;
     };
 }
 
