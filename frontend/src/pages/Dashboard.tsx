@@ -29,18 +29,17 @@ interface StatCardProps {
     subtext?: string;
 }
 
-function StatCard({ title, value, icon: Icon, accent, subtext }: StatCardProps) {
+function StatCard({ title, value, icon: Icon, accent }: StatCardProps) {
     return (
-        <Card className={`transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl ${accent ? 'border-blue-600/30 bg-gradient-to-br from-blue-900/40 to-card' : ''}`}>
-            <CardContent className="p-5">
-                <div className="flex items-start justify-between">
+        <Card className={`transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${accent ? 'border-blue-600/30 bg-gradient-to-br from-blue-900/40 to-card' : ''}`}>
+            <CardContent className="p-3.5">
+                <div className="flex items-center justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1.5">{title}</p>
-                        <p className={`text-xl font-bold truncate ${accent ? 'text-brand-gradient' : ''}`}>{value}</p>
-                        {subtext && <p className="text-xs text-muted-foreground mt-1">{subtext}</p>}
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-0.5">{title}</p>
+                        <p className={`text-lg font-bold truncate leading-tight ${accent ? 'text-brand-gradient' : ''}`}>{value}</p>
                     </div>
-                    <div className={`ml-3 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${accent ? 'bg-blue-600/20' : 'bg-secondary'}`}>
-                        <Icon className={`h-5 w-5 ${accent ? 'text-cyan-400' : 'text-muted-foreground'}`} />
+                    <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${accent ? 'bg-blue-600/20' : 'bg-secondary'}`}>
+                        <Icon className={`h-4 w-4 ${accent ? 'text-cyan-400' : 'text-muted-foreground'}`} />
                     </div>
                 </div>
             </CardContent>
@@ -134,40 +133,15 @@ function CountdownBanner({ activeCycles }: { activeCycles: Cycle[] }) {
     const parts = timeLeft === 'Processing...' ? [timeLeft] : timeLeft.split(' ');
 
     return (
-        <Card className="bg-gradient-to-br from-blue-600/10 to-blue-900/5 my-6 border-blue-600/20 shadow-inner relative overflow-hidden">
-            <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="flex flex-col sm:flex-row items-center justify-between p-4 sm:p-5 relative z-10 gap-4">
-                <div className="flex items-center gap-4 w-full sm:w-auto">
-                    <div className="bg-blue-600/20 p-2.5 rounded-lg border border-blue-600/30 flex-shrink-0">
-                        <Clock className="h-6 w-6 text-cyan-400" />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-foreground flex items-center gap-2">
-                            Next Earnings Distribution
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
-                            </span>
-                        </h3>
-                        <p className="text-muted-foreground text-sm mt-0.5">ROI is distributed daily directly to your withdrawable balance.</p>
-                    </div>
-                </div>
-                <div className="flex gap-2 flex-shrink-0 self-start sm:self-center">
-                    {parts.map((p, i) => (
-                        <div key={i} className="flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm border border-blue-600/20 rounded-md px-3 h-14 shadow-sm min-w-14">
-                            {p === 'Processing...' ? (
-                                <span className="text-sm font-bold text-blue-600">{p}</span>
-                            ) : (
-                                <>
-                                    <span className="text-xl font-bold text-blue-600 tabular-nums">{p.slice(0, 2)}</span>
-                                    <span className="text-[10px] text-muted-foreground uppercase font-medium">{p.slice(2)}</span>
-                                </>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </Card>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-blue-600/30 bg-blue-600/10 text-sm">
+            <Clock className="h-3.5 w-3.5 text-cyan-400 flex-shrink-0" />
+            <span className="text-muted-foreground text-xs">Next ROI in</span>
+            <span className="font-bold text-cyan-400 tabular-nums text-xs">{timeLeft}</span>
+            <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500"></span>
+            </span>
+        </div>
     );
 }
 
@@ -320,46 +294,73 @@ export default function Dashboard() {
     ];
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">
-                        Welcome back{user?.username ? `, ${user.username}` : ''}! 👋
-                    </h1>
-                    <p className="text-muted-foreground mt-1 text-base">Here is your investment overview for today.</p>
-                </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" size="sm" asChild>
-                        <Link to="/deposit">
-                            <ArrowRight className="h-4 w-4 mr-1.5" />
-                            Deposit
-                        </Link>
-                    </Button>
-                    <Button variant="brand" size="sm" asChild>
-                        <Link to="/withdraw">Withdraw</Link>
-                    </Button>
+        <div className="space-y-3">
+            {/* Welcome Hero Banner */}
+            <div className="relative overflow-hidden rounded-2xl border border-blue-600/20 bg-gradient-to-br from-blue-950/80 via-[#000614] to-blue-900/30 p-5 shadow-lg">
+                {/* Background glows */}
+                <div className="pointer-events-none absolute -top-12 -right-12 h-48 w-48 rounded-full bg-blue-600/15 blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-8 -left-8 h-36 w-36 rounded-full bg-cyan-500/10 blur-3xl" />
+
+                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    {/* Left: Branding + greeting */}
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-semibold uppercase tracking-widest text-cyan-400/70 border border-cyan-400/20 rounded-full px-2 py-0.5 bg-cyan-400/5">Quantara Platform</span>
+                        </div>
+                        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                            Welcome back, <span className="text-brand-gradient">{user?.username ?? 'Investor'}</span>!
+                        </h1>
+                        <p className="text-sm text-blue-200/60 mt-0.5">AI-Powered Wealth Infrastructure</p>
+
+                        {/* Inline quick stats */}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3">
+                            <div className="flex items-center gap-1.5">
+                                <RefreshCw className="h-3.5 w-3.5 text-cyan-400" />
+                                <span className="text-xs text-muted-foreground">Active Cycles</span>
+                                <span className="text-xs font-bold text-white">{d.activeCycleCount}</span>
+                            </div>
+                            <div className="w-px h-3 bg-border/60" />
+                            <CountdownBanner activeCycles={d.activeCycles} />
+                            <div className="w-px h-3 bg-border/60" />
+                            <div className="flex items-center gap-1.5">
+                                <TrendingUp className="h-3.5 w-3.5 text-cyan-400" />
+                                <span className="text-xs text-muted-foreground">Total Earnings</span>
+                                <span className="text-xs font-bold text-white">{formatUSDT(d.totalRoiEarned)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right: Action buttons */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <Button variant="outline" size="sm" asChild className="border-blue-600/40 hover:bg-blue-600/10 hover:border-blue-500/60">
+                            <Link to="/deposit">
+                                <ArrowRight className="h-4 w-4 mr-1.5" />
+                                Deposit
+                            </Link>
+                        </Button>
+                        <Button variant="brand" size="sm" asChild>
+                            <Link to="/withdraw">Withdraw</Link>
+                        </Button>
+                    </div>
                 </div>
             </div>
 
-            <CountdownBanner activeCycles={d.activeCycles} />
-
             {/* Stats grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2.5">
                 {stats.map((s) => (
                     <StatCard key={s.title} {...s} />
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Active cycles column (takes up 2 cols on lg) */}
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="flex items-center justify-between mb-4">
+                <div className="lg:col-span-2 space-y-3">
+                    <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <BarChart3 className="h-5 w-5 text-cyan-400" />
-                            <h2 className="text-lg font-semibold tracking-tight">Active Cycles</h2>
+                            <BarChart3 className="h-4 w-4 text-cyan-400" />
+                            <h2 className="text-base font-semibold tracking-tight">Active Cycles</h2>
                         </div>
-                        <Button variant="ghost" size="sm" asChild className="hover:text-cyan-400 transition-colors">
+                        <Button variant="ghost" size="sm" asChild className="hover:text-cyan-400 transition-colors h-7 text-xs">
                             <Link to="/cycles" className="flex items-center gap-1">
                                 View all <ArrowRight className="h-3 w-3" />
                             </Link>

@@ -26,9 +26,7 @@ const navItems = [
 ];
 
 const adminNavItems = [
-    { to: '/admin/users', icon: Users, label: 'Users' },
-    { to: '/admin/withdrawals', icon: ArrowUpFromLine, label: 'Withdrawals' },
-    { to: '/admin/settings', icon: Settings, label: 'Settings' },
+    { to: '/user/admin', icon: Shield, label: 'Admin Console' },
 ];
 
 export default function Layout() {
@@ -147,10 +145,8 @@ export default function Layout() {
             {/* Main content */}
             <div className="flex flex-1 flex-col min-w-0">
                 {/* Mobile topbar (Branding only) */}
-                <header className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center gap-3 border-b border-border bg-background/60 backdrop-blur-md px-4 lg:hidden">
-                    <div className="flex items-center">
-                        <img src="/logo.png" alt="Quantara" className="h-17 w-auto" />
-                    </div>
+                <header className="fixed top-0 left-0 right-0 z-50 flex h-12 items-center border-b border-border bg-background/70 backdrop-blur-md px-4 lg:hidden">
+                    <span className="text-sm font-bold tracking-widest text-brand-gradient">QUANTARA</span>
                 </header>
 
                 <main className="flex-1 overflow-y-auto pt-14 pb-24 lg:pt-0 lg:pb-0 p-4 md:p-6 lg:p-10 animate-fade-in">

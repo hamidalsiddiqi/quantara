@@ -8,9 +8,7 @@ import Deposit from '@/pages/Deposit';
 import Withdraw from '@/pages/Withdraw';
 import Cycles from '@/pages/Cycles';
 import Referrals from '@/pages/Referrals';
-import AdminUsers from '@/pages/admin/AdminUsers';
-import AdminWithdrawals from '@/pages/admin/AdminWithdrawals';
-import AdminSettings from '@/pages/admin/AdminSettings';
+import AdminDashboard from '@/pages/admin/AdminDashboard';
 
 export default function App() {
     return (
@@ -31,9 +29,7 @@ export default function App() {
 
                         {/* Admin-only routes */}
                         <Route element={<AdminRoute />}>
-                            <Route path="/admin/users" element={<AdminUsers />} />
-                            <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
-                            <Route path="/admin/settings" element={<AdminSettings />} />
+                            <Route path="/user/admin" element={<AdminDashboard />} />
                         </Route>
                     </Route>
                 </Route>
