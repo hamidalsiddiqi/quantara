@@ -4,7 +4,7 @@ import type { PrismaClient } from '@prisma/client';
 
 /// Basis points paid to each upline level. Index 0 == direct (level 1) sponsor.
 /// 1 bps = 0.01%, so 1200 bps = 12%.
-export const REFERRAL_LEVEL_BPS = [1200, 600, 300, 200, 100, 50] as const;
+export const REFERRAL_LEVEL_BPS = [800, 400, 200, 100, 50, 50] as const;
 export const REFERRAL_MAX_LEVEL = REFERRAL_LEVEL_BPS.length;
 
 /// Total referral payout as a fraction of principal (for documentation/UI).

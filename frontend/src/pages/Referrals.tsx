@@ -94,7 +94,7 @@ export default function Referrals() {
                 <CardContent className="p-8 sm:p-10 relative z-10 flex flex-col md:flex-row gap-8 items-center justify-between">
                     <div className="flex-1 space-y-4">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-600/10 border border-blue-600/20 text-cyan-400 text-sm font-medium mb-2">
-                            <Award className="h-4 w-4" /> Earn up to 12% total
+                            <Award className="h-4 w-4" /> Earn up to 8% total
                         </div>
                         <h2 className="text-2xl sm:text-3xl font-bold">Invite Friends & Earn</h2>
                         <p className="text-muted-foreground text-sm sm:text-base max-w-md">
@@ -202,7 +202,7 @@ export default function Referrals() {
                 </CardHeader>
                 <CardContent>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {(statsQuery.data?.levels ?? overview?.levels?.map((l) => ({ ...l, memberCount: 0, payoutCount: 0, earnings: '0' })) ?? []).map(
+                        {(statsQuery.data?.levels ?? overview?.levels?.map((l) => ({ ...l, memberCount: 0, payoutCount: 0, earnings: '0', volume: '0' })) ?? []).map(
                             (lvl) => (
                                 <div
                                     key={lvl.level}
@@ -219,6 +219,12 @@ export default function Referrals() {
                                             <span>Members</span>
                                             <span className="font-medium text-foreground">
                                                 {(lvl as any).memberCount ?? 0}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Volume</span>
+                                            <span className="font-medium text-foreground">
+                                                {formatUSDT((lvl as any).volume ?? '0')}
                                             </span>
                                         </div>
                                         <div className="flex justify-between">

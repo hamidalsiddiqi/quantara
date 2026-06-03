@@ -433,7 +433,7 @@ export default function Dashboard() {
                     { to: '/deposit', icon: ArrowRight, label: 'Deposit USDT', desc: 'Fund your account' },
                     { to: '/withdraw', icon: Wallet, label: 'Withdraw', desc: 'Cash out earnings' },
                     { to: '/cycles', icon: RefreshCw, label: 'Cycle History', desc: 'View all cycles' },
-                    { to: '/referrals', icon: Users, label: 'Referrals', desc: 'Invite & earn 12%' },
+                    { to: '/referrals', icon: Users, label: 'Referrals', desc: 'Invite & earn 8%' },
                 ].map(({ to, icon: Icon, label, desc }) => (
                     <Link key={label} to={to}>
                         <Card className="hover:border-primary/30 hover:bg-accent transition-all duration-150 cursor-pointer group">
