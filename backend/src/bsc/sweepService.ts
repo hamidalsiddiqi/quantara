@@ -42,7 +42,7 @@ export async function sweepUserAddress(userId: string): Promise<void> {
   const nonZero = balances.filter((b) => b.balance > 0n);
   if (nonZero.length === 0) return;
 
-  const gasNeeded = parseEther(0.0009);
+  const gasNeeded = parseEther('0.0009');
   const fundTx = await admin.sendTransaction({ to: user.bscDepositAddress, value: gasNeeded });
   await fundTx.wait(1);
   console.log(`[sweep] funded ${user.bscDepositAddress} with ${SWEEP_GAS_BNB} BNB tx=${fundTx.hash}`);
