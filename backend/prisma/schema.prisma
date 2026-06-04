@@ -125,7 +125,9 @@ model Withdrawal {
   userId      String
   user        User           @relation(fields: [userId], references: [id])
   toAddress   String
-  amount      Decimal        @db.Decimal(36, 18)
+  amount      Decimal        @db.Decimal(36, 18) // gross amount debited from balance
+  fee         Decimal        @default(0) @db.Decimal(36, 18) // withdrawal fee retained by platform
+  netAmount   Decimal        @default(0) @db.Decimal(36, 18) // amount actually sent on-chain (amount - fee)
   status      WithdrawStatus @default(PENDING)
   requestId   String         @unique
   txHash      String?

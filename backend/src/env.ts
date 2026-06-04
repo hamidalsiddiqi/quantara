@@ -24,6 +24,9 @@ const schema = z.object({
   ROI_TICK_INTERVAL_MS: z.coerce.number().default(60000),
   WITHDRAW_TICK_INTERVAL_MS: z.coerce.number().default(30000),
   DEPOSIT_SCAN_CHUNK: z.coerce.number().default(2000),
+
+  // Withdrawal fee in basis points (500 = 5%), deducted from the requested amount.
+  WITHDRAW_FEE_BPS: z.coerce.number().int().min(0).max(10000).default(500),
 });
 
 export const env = schema.parse(process.env);

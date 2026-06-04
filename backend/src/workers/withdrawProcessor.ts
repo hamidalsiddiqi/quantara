@@ -60,9 +60,11 @@ async function processPending(): Promise<void> {
         continue;
       }
 
-      // Check admin wallet USDT balance
+      // Check admin wallet USDT balance. We send the NET amount (gross minus the
+      // withdrawal fee); the gross `amount` is what gets debited from the user's
+      // balance, while `netAmount` is what actually leaves the admin wallet.
       const adminBalance = await usdt.balanceOf(admin.address);
-      const units = decimalToUnits(new Prisma.Decimal(w.amount), USDT_DECIMALS);
+      const units = decimalToUnits(new Prisma.Decimal(w.netAmount), USDT_DECIMALS);
       if (adminBalance < units) {
         console.error(`[withdrawProcessor] admin wallet insufficient USDT balance: has ${adminBalance.toString()}, needs ${units.toString()}`);
         // We don't fail the withdrawal here, just skip it to retry later when admin refills.

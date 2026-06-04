@@ -145,7 +145,7 @@ export const api = {
 
     // ── Withdraw ──────────────────────────────────────────
     withdraw: {
-        balance: () => request<{ withdrawable: string }>('/withdraw/balance'),
+        balance: () => request<{ withdrawable: string; feeBps: number; nextWithdrawalAt: string | null }>('/withdraw/balance'),
         history: () => request<{ items: Withdrawal[] }>('/withdraw/history'),
         submit: (body: { toAddress: string; amount: string }) =>
             request<{ withdrawal: Withdrawal }>('/withdraw', { method: 'POST', body: JSON.stringify(body) }),
@@ -210,6 +210,8 @@ export interface Withdrawal {
     id: string;
     toAddress: string;
     amount: string;
+    fee: string;
+    netAmount: string;
     status: 'PENDING' | 'SIGNED' | 'BROADCAST' | 'CONFIRMED' | 'FAILED';
     txHash?: string | null;
     error?: string | null;

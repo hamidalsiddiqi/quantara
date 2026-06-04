@@ -53,6 +53,8 @@ function WithdrawalTable({ status }: { status?: string }) {
                     <TableHead>User</TableHead>
                     <TableHead>To Address</TableHead>
                     <TableHead>Amount</TableHead>
+                    <TableHead className="hidden sm:table-cell">Fee</TableHead>
+                    <TableHead>Net Sent</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="hidden md:table-cell">Tx Hash</TableHead>
                     <TableHead className="hidden lg:table-cell">Date</TableHead>
@@ -72,6 +74,8 @@ function WithdrawalTable({ status }: { status?: string }) {
                             </TableCell>
                             <TableCell className="font-mono text-xs">{shortAddress(w.toAddress)}</TableCell>
                             <TableCell className="font-medium">{formatUSDT(w.amount)}</TableCell>
+                            <TableCell className="hidden sm:table-cell text-muted-foreground">{formatUSDT(w.fee)}</TableCell>
+                            <TableCell className="font-medium">{formatUSDT(w.netAmount)}</TableCell>
                             <TableCell>
                                 <div>
                                     <Badge variant={s.variant}>{s.label}</Badge>

@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,8 +9,17 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatUSDT, formatDate, shortAddress } from '@/lib/utils';
 import { toast } from '@/components/ui/use-toast';
-import { Loader2, Wallet, AlertTriangle, Info } from 'lucide-react';
+import { Loader2, Wallet, AlertTriangle, Info, Clock } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+
+/// Format milliseconds remaining as "Hh Mm Ss".
+function formatCountdown(ms: number): string {
+    const total = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    return `${h}h ${m}m ${s}s`;
+}
 
 const withdrawStatusMap: Record<string, { label: string; variant: any }> = {
     PENDING: { label: 'Pending', variant: 'warning' },
@@ -51,6 +60,8 @@ export default function Withdraw() {
         },
         onError: (err: any) => {
             setFormError(err.message ?? 'Withdrawal failed');
+            // A 429 means the daily limit was hit — refresh so the countdown shows.
+            qc.invalidateQueries({ queryKey: ['withdraw-balance'] });
         },
     });
 
@@ -70,10 +81,41 @@ export default function Withdraw() {
             setFormError('Enter a valid BSC wallet address (0x...)');
             return;
         }
+        const next = balanceData?.nextWithdrawalAt;
+        if (next && new Date(next).getTime() > Date.now()) {
+            setFormError('You can only submit one withdrawal request every 24 hours.');
+            return;
+        }
         mutation.mutate({ toAddress, amount: String(amt) });
     }
 
     const withdrawable = parseFloat(balanceData?.withdrawable ?? '0');
+    const feeBps = balanceData?.feeBps ?? 0;
+    const feePct = feeBps / 100;
+    const amt = parseFloat(amount);
+    const showQuote = !isNaN(amt) && amt > 0 && feeBps > 0;
+    const feeAmount = showQuote ? (amt * feeBps) / 10000 : 0;
+    const netAmount = showQuote ? amt - feeAmount : 0;
+
+    // Live countdown until the next withdrawal is allowed (one request per 24h).
+    const nextWithdrawalAt = balanceData?.nextWithdrawalAt ?? null;
+    const [now, setNow] = useState(() => Date.now());
+    const nextMs = nextWithdrawalAt ? new Date(nextWithdrawalAt).getTime() : 0;
+    const cooldownRemaining = nextMs - now;
+    const onCooldown = cooldownRemaining > 0;
+
+    useEffect(() => {
+        if (!onCooldown) return;
+        const id = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
+    }, [onCooldown]);
+
+    // When the countdown elapses, refresh balance so the server lifts the lock.
+    useEffect(() => {
+        if (nextWithdrawalAt && !onCooldown) {
+            qc.invalidateQueries({ queryKey: ['withdraw-balance'] });
+        }
+    }, [onCooldown, nextWithdrawalAt, qc]);
 
     return (
         <div className="space-y-6">
@@ -131,6 +173,19 @@ export default function Withdraw() {
                                     )}
                                 </div>
 
+                                {showQuote && (
+                                    <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm space-y-1">
+                                        <div className="flex justify-between text-muted-foreground">
+                                            <span>Withdrawal fee ({feePct}%)</span>
+                                            <span>−{formatUSDT(feeAmount)}</span>
+                                        </div>
+                                        <div className="flex justify-between font-medium border-t border-border pt-1 mt-1">
+                                            <span>You receive</span>
+                                            <span className="text-brand-gradient">{formatUSDT(netAmount)}</span>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="space-y-2">
                                     <Label htmlFor="toAddress">BSC Payout Address</Label>
                                     <Input
@@ -145,19 +200,33 @@ export default function Withdraw() {
                                     <p className="text-xs text-muted-foreground">Must be a valid BEP-20 compatible wallet address</p>
                                 </div>
 
-                                <div className="flex gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 p-3 text-xs text-blue-300/80">
-                                    <Info className="h-3.5 w-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
-                                    Withdrawals are processed automatically. On-chain confirmation may take a few minutes.
-                                </div>
+                                {onCooldown ? (
+                                    <div className="flex gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-300/90">
+                                        <Clock className="h-3.5 w-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+                                        <span>
+                                            Only one withdrawal request is allowed every 24 hours. Next request available in{' '}
+                                            <span className="font-semibold tabular-nums">{formatCountdown(cooldownRemaining)}</span>.
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 p-3 text-xs text-blue-300/80">
+                                        <Info className="h-3.5 w-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
+                                        Withdrawals are processed automatically. You can submit one request every 24 hours.
+                                    </div>
+                                )}
 
                                 <Button
                                     type="submit"
                                     variant="brand"
                                     className="w-full"
-                                    disabled={mutation.isPending || withdrawable === 0}
+                                    disabled={mutation.isPending || withdrawable === 0 || onCooldown}
                                 >
                                     {mutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                                    {mutation.isPending ? 'Submitting…' : 'Request Withdrawal'}
+                                    {mutation.isPending
+                                        ? 'Submitting…'
+                                        : onCooldown
+                                            ? `Available in ${formatCountdown(cooldownRemaining)}`
+                                            : 'Request Withdrawal'}
                                 </Button>
                             </form>
                         </CardContent>
@@ -213,6 +282,8 @@ export default function Withdraw() {
                                 <TableRow>
                                     <TableHead>To Address</TableHead>
                                     <TableHead>Amount</TableHead>
+                                    <TableHead className="hidden sm:table-cell">Fee</TableHead>
+                                    <TableHead>Received</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead className="hidden md:table-cell">Tx Hash</TableHead>
                                     <TableHead className="hidden lg:table-cell">Date</TableHead>
@@ -225,6 +296,8 @@ export default function Withdraw() {
                                         <TableRow key={w.id}>
                                             <TableCell className="font-mono text-xs">{shortAddress(w.toAddress)}</TableCell>
                                             <TableCell className="font-medium">{formatUSDT(w.amount)}</TableCell>
+                                            <TableCell className="hidden sm:table-cell text-muted-foreground">{formatUSDT(w.fee)}</TableCell>
+                                            <TableCell className="font-medium">{formatUSDT(w.netAmount)}</TableCell>
                                             <TableCell><Badge variant={s.variant}>{s.label}</Badge></TableCell>
                                             <TableCell className="hidden md:table-cell">
                                                 {w.txHash ? (

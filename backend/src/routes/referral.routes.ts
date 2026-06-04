@@ -74,41 +74,34 @@ router.get('/stats', async (req, res) => {
     frontier = children.map((c) => c.id);
   }
 
-  // Per-level earnings and volume (accounting for historical bps changes).
+  // Per-level earnings.
   const grouped = await prisma.referralEarning.groupBy({
-    by: ['level', 'bps'],
+    by: ['level'],
     where: { userId },
     _sum: { amount: true },
     _count: { _all: true },
   });
-
-  const statsByLevel = new Map<number, { amount: Prisma.Decimal; volume: Prisma.Decimal; count: number }>();
+  const earningsByLevel = new Map<number, { amount: Prisma.Decimal; count: number }>();
   for (const g of grouped) {
-    const amount = g._sum.amount ?? new Prisma.Decimal(0);
-    const volume = amount.mul(10000).div(g.bps);
-    const existing = statsByLevel.get(g.level) ?? {
-      amount: new Prisma.Decimal(0),
-      volume: new Prisma.Decimal(0),
-      count: 0,
-    };
-    statsByLevel.set(g.level, {
-      amount: existing.amount.add(amount),
-      volume: existing.volume.add(volume),
-      count: existing.count + g._count._all,
+    earningsByLevel.set(g.level, {
+      amount: g._sum.amount ?? new Prisma.Decimal(0),
+      count: g._count._all,
     });
   }
 
   const levels = REFERRAL_LEVEL_BPS.map((bps, i) => {
     const level = i + 1;
-    const s = statsByLevel.get(level);
+    const e = earningsByLevel.get(level);
+    const amount = e?.amount ?? new Prisma.Decimal(0);
+    const volume = amount.mul(10000).div(bps);
     return {
       level,
       bps,
       percent: bps / 100,
       memberCount: counts[i] ?? 0,
-      payoutCount: s?.count ?? 0,
-      earnings: (s?.amount ?? new Prisma.Decimal(0)).toFixed(),
-      volume: (s?.volume ?? new Prisma.Decimal(0)).toFixed(),
+      payoutCount: e?.count ?? 0,
+      earnings: amount.toFixed(),
+      volume: volume.toFixed(),
     };
   });
 
