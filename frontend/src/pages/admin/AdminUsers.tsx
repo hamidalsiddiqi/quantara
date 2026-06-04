@@ -6,10 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { formatDate, shortAddress, formatUSDT } from '@/lib/utils';
 import { Loader2, Users, ShieldAlert, ShieldCheck, Coins, TrendingUp } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 export default function AdminUsers() {
-    const { toast } = useToast();
     const { data, isLoading, error, refetch } = useQuery({
         queryKey: ['admin-users'],
         queryFn: api.admin.users,
