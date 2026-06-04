@@ -6,7 +6,7 @@ import { prisma } from '../db';
 /// Earnings include both daily ROI and end-of-cycle PRINCIPAL_RELEASE rows,
 /// so once a cycle completes its principal becomes withdrawable.
 export async function getWithdrawableBalance(userId: string): Promise<Prisma.Decimal> {
-  const [earningsAgg, referralAgg, withdrawalsAgg] = await Promise.all([
+  const [earningsAgg, referralAgg, withdrawalsAgg, user] = await Promise.all([
     prisma.earning.aggregate({
       where: { userId },
       _sum: { amount: true },
@@ -19,11 +19,16 @@ export async function getWithdrawableBalance(userId: string): Promise<Prisma.Dec
       where: { userId, status: { in: ['PENDING', 'SIGNED', 'BROADCAST', 'CONFIRMED'] } },
       _sum: { amount: true },
     }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { adminBalance: true }
+    })
   ]);
   const earned = earningsAgg._sum.amount ?? new Prisma.Decimal(0);
   const referral = referralAgg._sum.amount ?? new Prisma.Decimal(0);
   const withdrawn = withdrawalsAgg._sum.amount ?? new Prisma.Decimal(0);
-  return earned.add(referral).sub(withdrawn);
+  const adminAdd = user?.adminBalance ?? new Prisma.Decimal(0);
+  return earned.add(referral).add(adminAdd).sub(withdrawn);
 }
 
 /// Sum of principals locked in currently ACTIVE cycles.

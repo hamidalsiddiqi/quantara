@@ -158,6 +158,15 @@ export const api = {
                 users: AdminUser[];
             }>('/admin/users'),
 
+        adjustBalance: (id: string, action: 'add' | 'deduct', amount: string) =>
+            request<{ user: AdminUser }>(`/admin/users/${id}/balance`, { method: 'POST', body: JSON.stringify({ action, amount }) }),
+
+        adjustProfit: (id: string, action: 'add' | 'deduct', amount: string) =>
+            request<{ user: AdminUser }>(`/admin/users/${id}/profit`, { method: 'POST', body: JSON.stringify({ action, amount }) }),
+
+        banUser: (id: string, ban: boolean) =>
+            request<{ user: AdminUser }>(`/admin/users/${id}/ban`, { method: 'POST', body: JSON.stringify({ ban }) }),
+
         withdrawals: (status?: string) =>
             request<{ items: WithdrawalAdmin[] }>(`/admin/withdrawals${status ? `?status=${status}` : ''}`),
 
@@ -224,6 +233,9 @@ export interface AdminUser {
     email: string;
     username: string;
     isAdmin: boolean;
+    isBanned: boolean;
+    adminBalance: string;
+    adminProfits: string;
     bscDepositAddress?: string | null;
     bscWithdrawAddress?: string | null;
     createdAt: string;

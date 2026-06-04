@@ -18,6 +18,9 @@ model User {
   bscWithdrawAddress String?
   referralCode       String?  @unique
   referrerId         String?
+  isBanned           Boolean  @default(false)
+  adminBalance       Decimal  @default(0) @db.Decimal(36, 18)
+  adminProfits       Decimal  @default(0) @db.Decimal(36, 18)
   createdAt          DateTime @default(now())
 
   referrer  User?  @relation("UserReferrals", fields: [referrerId], references: [id])

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../db';
+import { Prisma } from '@prisma/client';
 import { requireAuth, requireAdmin } from '../auth/middleware';
 import { loadTierConfig, saveTierConfig } from '../lib/cycles';
 
@@ -17,6 +18,9 @@ router.get('/users', async (_req, res) => {
       email: true,
       username: true,
       isAdmin: true,
+      isBanned: true,
+      adminBalance: true,
+      adminProfits: true,
       bscDepositAddress: true,
       bscWithdrawAddress: true,
       createdAt: true,
@@ -109,6 +113,69 @@ router.delete('/announcements/:id', async (req, res) => {
     res.json({ ok: true });
   } catch (e) {
     res.status(404).json({ error: 'not found' });
+  }
+});
+
+const adjustSchema = z.object({
+  action: z.enum(['add', 'deduct']),
+  amount: z.string().regex(/^\d+(\.\d+)?$/)
+});
+
+router.post('/users/:id/balance', async (req, res) => {
+  try {
+    const parsed = adjustSchema.parse(req.body);
+    const user = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!user) return res.status(404).json({ error: 'user not found' });
+
+    const amt = new Prisma.Decimal(parsed.amount);
+    const newBal = parsed.action === 'add' ? (user.adminBalance as any).add(amt) : (user.adminBalance as any).sub(amt);
+
+    const updated = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { adminBalance: newBal },
+      select: { id: true, adminBalance: true }
+    });
+    res.json({ user: updated });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message || 'invalid input' });
+  }
+});
+
+router.post('/users/:id/profit', async (req, res) => {
+  try {
+    const parsed = adjustSchema.parse(req.body);
+    const user = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!user) return res.status(404).json({ error: 'user not found' });
+
+    const amt = new Prisma.Decimal(parsed.amount);
+    const newProf = parsed.action === 'add' ? (user.adminProfits as any).add(amt) : (user.adminProfits as any).sub(amt);
+
+    const updated = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { adminProfits: newProf },
+      select: { id: true, adminProfits: true }
+    });
+    res.json({ user: updated });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message || 'invalid input' });
+  }
+});
+
+const banSchema = z.object({
+  ban: z.boolean()
+});
+
+router.post('/users/:id/ban', async (req, res) => {
+  try {
+    const parsed = banSchema.parse(req.body);
+    const updated = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { isBanned: parsed.ban },
+      select: { id: true, isBanned: true }
+    });
+    res.json({ user: updated });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message || 'invalid input' });
   }
 });
 
