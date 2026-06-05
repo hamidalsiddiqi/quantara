@@ -1,12 +1,16 @@
-import { useQuery } from '@tanstack/react-query';
-import { api, type Cycle } from '@/lib/api';
+import { useState, FormEvent } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api, type Cycle, type TierConfig } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from '@/components/ui/use-toast';
 import { formatUSDT, formatDate, roiPercent, daysLeft, progressPct } from '@/lib/utils';
-import { Loader2, RefreshCw, CheckCircle2, XCircle, Zap, Shield, Crown, ArrowRight } from 'lucide-react';
+import { Loader2, RefreshCw, CheckCircle2, XCircle, Zap, Shield, Crown, ArrowRight, Wallet, AlertTriangle, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const tierColor: Record<string, any> = { STARTER: 'brand', PRO: 'info', ELITE: 'success' };
@@ -77,6 +81,163 @@ function CycleCard({ cycle }: { cycle: Cycle }) {
                 </div>
             </CardContent>
         </Card>
+    );
+}
+
+/// Client-side mirror of the backend tier selection (selectTier) so the dialog
+/// can preview which tier an amount lands in before submitting.
+function previewTier(amount: number, tiers: TierConfig): 'STARTER' | 'PRO' | 'ELITE' | null {
+    if (amount >= tiers.ELITE.min) return 'ELITE';
+    if (amount >= tiers.PRO.min && amount <= tiers.PRO.max) return 'PRO';
+    if (amount >= tiers.STARTER.min && amount <= tiers.STARTER.max) return 'STARTER';
+    return null;
+}
+
+function BuyWithBalanceDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+    const qc = useQueryClient();
+    const [amount, setAmount] = useState('');
+    const [formError, setFormError] = useState('');
+
+    const { data: balanceData, isLoading: balLoading } = useQuery({
+        queryKey: ['withdraw-balance'],
+        queryFn: api.withdraw.balance,
+        enabled: open,
+    });
+
+    const { data: tiersData } = useQuery({
+        queryKey: ['tiers'],
+        queryFn: api.cycles.tiers,
+        enabled: open,
+    });
+
+    const mutation = useMutation({
+        mutationFn: api.cycles.buy,
+        onSuccess: (res) => {
+            toast({ title: `${res.tier} cycle started!`, variant: 'success' });
+            setAmount('');
+            setFormError('');
+            qc.invalidateQueries({ queryKey: ['cycles'] });
+            qc.invalidateQueries({ queryKey: ['withdraw-balance'] });
+            qc.invalidateQueries({ queryKey: ['dashboard'] });
+            onClose();
+        },
+        onError: (err: any) => setFormError(err.message ?? 'Purchase failed'),
+    });
+
+    if (!open) return null;
+
+    const withdrawable = parseFloat(balanceData?.withdrawable ?? '0');
+    const amt = parseFloat(amount);
+    const tier = !isNaN(amt) && tiersData ? previewTier(amt, tiersData.tiers) : null;
+    const tierCfg = tier && tiersData ? tiersData.tiers[tier] : null;
+
+    function setMax() {
+        if (balanceData?.withdrawable) setAmount(parseFloat(balanceData.withdrawable).toFixed(4));
+    }
+
+    function handleSubmit(e: FormEvent) {
+        e.preventDefault();
+        setFormError('');
+        if (isNaN(amt) || amt <= 0) {
+            setFormError('Enter a valid amount greater than 0');
+            return;
+        }
+        if (!tier) {
+            setFormError(`Amount does not match any tier (minimum: ${tiersData?.tiers.STARTER.min ?? 20} USDT)`);
+            return;
+        }
+        if (amt > withdrawable) {
+            setFormError('Amount exceeds your withdrawable balance');
+            return;
+        }
+        mutation.mutate({ amount: String(amt) });
+    }
+
+    return (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
+            <Card className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-200">
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+                    <div>
+                        <CardTitle className="text-base flex items-center gap-2">
+                            <Wallet className="h-4 w-4" /> Buy Cycle with Balance
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground mt-1">Fund a new cycle from your withdrawable balance</p>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={onClose}>
+                        <X className="h-4 w-4" />
+                    </Button>
+                </CardHeader>
+                <CardContent>
+                    <div className="mb-4 rounded-xl border border-blue-600/20 bg-gradient-to-br from-blue-900/40 to-card p-4">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Withdrawable Balance</p>
+                        {balLoading ? (
+                            <div className="h-7 w-32 shimmer-bg rounded" />
+                        ) : (
+                            <p className="text-2xl font-bold text-brand-gradient">{formatUSDT(balanceData?.withdrawable ?? '0')}</p>
+                        )}
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {formError && (
+                            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive flex gap-2">
+                                <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                                {formError}
+                            </div>
+                        )}
+
+                        <div className="space-y-2">
+                            <Label htmlFor="buy-amount">Amount (USDT)</Label>
+                            <div className="flex gap-2">
+                                <Input
+                                    id="buy-amount"
+                                    type="number"
+                                    step="0.0001"
+                                    min="0.0001"
+                                    placeholder="0.0000"
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                    required
+                                />
+                                <Button type="button" variant="outline" size="sm" onClick={setMax} className="flex-shrink-0">
+                                    MAX
+                                </Button>
+                            </div>
+                            {!isNaN(amt) && amt > withdrawable && (
+                                <p className="text-xs text-destructive">Exceeds available balance</p>
+                            )}
+                        </div>
+
+                        {tier && tierCfg && (
+                            <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm space-y-1">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-muted-foreground">Tier</span>
+                                    <Badge variant={tierColor[tier]}>{tier}</Badge>
+                                </div>
+                                <div className="flex justify-between text-muted-foreground">
+                                    <span>Daily ROI</span>
+                                    <span className="font-medium text-foreground">{roiPercent(tierCfg.dailyRoiBps)}/day</span>
+                                </div>
+                                <div className="flex justify-between text-muted-foreground">
+                                    <span>Duration</span>
+                                    <span className="font-medium text-foreground">{tierCfg.durationDays} days</span>
+                                </div>
+                            </div>
+                        )}
+
+                        <Button
+                            type="submit"
+                            variant="brand"
+                            className="w-full"
+                            disabled={mutation.isPending || withdrawable === 0}
+                        >
+                            {mutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                            {mutation.isPending ? 'Purchasing…' : 'Buy Cycle'}
+                        </Button>
+                    </form>
+                </CardContent>
+            </Card>
+        </div>
     );
 }
 
@@ -152,6 +313,7 @@ function PremiumPlanCards() {
 }
 
 export default function Cycles() {
+    const [buyOpen, setBuyOpen] = useState(false);
     const { data, isLoading, error } = useQuery({
         queryKey: ['cycles'],
         queryFn: api.cycles.list,
@@ -169,10 +331,18 @@ export default function Cycles() {
                     <h1 className="text-3xl font-bold tracking-tight">Investment Cycles</h1>
                     <p className="text-base text-muted-foreground mt-1">Track your capital lock-up and daily ROI progress</p>
                 </div>
-                <Button variant="brand" size="sm" asChild>
-                    <Link to="/deposit">Start New Cycle</Link>
-                </Button>
+                <div className="flex gap-2">
+                    <Button variant="secondary" size="sm" onClick={() => setBuyOpen(true)}>
+                        <Wallet className="h-4 w-4 mr-1.5" />
+                        Buy with Balance
+                    </Button>
+                    <Button variant="brand" size="sm" asChild>
+                        <Link to="/deposit">Start New Cycle</Link>
+                    </Button>
+                </div>
             </div>
+
+            <BuyWithBalanceDialog open={buyOpen} onClose={() => setBuyOpen(false)} />
 
             <PremiumPlanCards />
 

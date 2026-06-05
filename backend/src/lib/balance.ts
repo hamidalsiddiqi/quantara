@@ -3,23 +3,28 @@ import { prisma } from '../db';
 
 /// Returns the user's current withdrawable balance:
 ///   sum(earnings.amount) - sum(non-failed withdrawals.amount)
-/// Earnings include both daily ROI and end-of-cycle PRINCIPAL_RELEASE rows,
-/// so once a cycle completes its principal becomes withdrawable.
-export async function getWithdrawableBalance(userId: string): Promise<Prisma.Decimal> {
+/// Earnings include daily ROI, end-of-cycle PRINCIPAL_RELEASE rows, and
+/// negative CYCLE_PURCHASE rows (balance-funded cycles), so once a cycle
+/// completes its principal becomes withdrawable. Pass a Prisma transaction
+/// client to read inside a transaction.
+export async function getWithdrawableBalance(
+  userId: string,
+  client: Pick<typeof prisma, 'earning' | 'referralEarning' | 'withdrawal' | 'user'> = prisma,
+): Promise<Prisma.Decimal> {
   const [earningsAgg, referralAgg, withdrawalsAgg, user] = await Promise.all([
-    prisma.earning.aggregate({
+    client.earning.aggregate({
       where: { userId },
       _sum: { amount: true },
     }),
-    prisma.referralEarning.aggregate({
+    client.referralEarning.aggregate({
       where: { userId },
       _sum: { amount: true },
     }),
-    prisma.withdrawal.aggregate({
+    client.withdrawal.aggregate({
       where: { userId, status: { in: ['PENDING', 'SIGNED', 'BROADCAST', 'CONFIRMED'] } },
       _sum: { amount: true },
     }),
-    prisma.user.findUnique({
+    client.user.findUnique({
       where: { id: userId },
       select: { adminBalance: true }
     })

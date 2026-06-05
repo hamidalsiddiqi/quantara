@@ -141,6 +141,11 @@ export const api = {
         list: () => request<{ items: Cycle[] }>('/cycles'),
         active: () => request<{ items: Cycle[] }>('/cycles/active'),
         tiers: () => request<{ tiers: TierConfig }>('/cycles/tiers'),
+        buy: (body: { amount: string }) =>
+            request<{ ok: boolean; cycle: Cycle; tier: string }>('/cycles/buy', {
+                method: 'POST',
+                body: JSON.stringify(body),
+            }),
     },
 
     // ── Withdraw ──────────────────────────────────────────

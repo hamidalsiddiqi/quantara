@@ -22,21 +22,29 @@ async function failWithdrawal(id: string, message: string): Promise<void> {
 /// this withdrawal. We exclude THIS withdrawal from "outstanding" because
 /// we're about to settle it.
 async function hasSufficientBalance(userId: string, withdrawalId: string, amount: Prisma.Decimal): Promise<boolean> {
-  const earnings = await prisma.earning.aggregate({
-    where: { userId },
-    _sum: { amount: true },
-  });
-  const outstanding = await prisma.withdrawal.aggregate({
-    where: {
-      userId,
-      id: { not: withdrawalId },
-      status: { in: ['PENDING', 'SIGNED', 'BROADCAST', 'CONFIRMED'] },
-    },
-    _sum: { amount: true },
-  });
-  const available = (earnings._sum.amount ?? new Prisma.Decimal(0)).sub(
-    outstanding._sum.amount ?? new Prisma.Decimal(0),
-  );
+  const [earnings, referral, outstanding, user] = await Promise.all([
+    prisma.earning.aggregate({
+      where: { userId },
+      _sum: { amount: true },
+    }),
+    prisma.referralEarning.aggregate({
+      where: { userId },
+      _sum: { amount: true },
+    }),
+    prisma.withdrawal.aggregate({
+      where: {
+        userId,
+        id: { not: withdrawalId },
+        status: { in: ['PENDING', 'SIGNED', 'BROADCAST', 'CONFIRMED'] },
+      },
+      _sum: { amount: true },
+    }),
+    prisma.user.findUnique({ where: { id: userId }, select: { adminBalance: true } }),
+  ]);
+  const available = (earnings._sum.amount ?? new Prisma.Decimal(0))
+    .add(referral._sum.amount ?? new Prisma.Decimal(0))
+    .add(user?.adminBalance ?? new Prisma.Decimal(0))
+    .sub(outstanding._sum.amount ?? new Prisma.Decimal(0));
   return available.gte(amount);
 }
 

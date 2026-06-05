@@ -71,6 +71,7 @@ model Cycle {
 enum EarningKind {
   ROI
   PRINCIPAL_RELEASE
+  CYCLE_PURCHASE
 }
 
 model Earning {

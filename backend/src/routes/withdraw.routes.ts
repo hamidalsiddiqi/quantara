@@ -77,17 +77,7 @@ router.post('/', async (req, res) => {
         throw err;
       }
 
-      const earnings = await tx.earning.aggregate({
-        where: { userId: req.userId },
-        _sum: { amount: true },
-      });
-      const outstanding = await tx.withdrawal.aggregate({
-        where: { userId: req.userId, status: { in: ['PENDING', 'SIGNED', 'BROADCAST', 'CONFIRMED'] } },
-        _sum: { amount: true },
-      });
-      const available = (earnings._sum.amount ?? new Prisma.Decimal(0)).sub(
-        outstanding._sum.amount ?? new Prisma.Decimal(0),
-      );
+      const available = await getWithdrawableBalance(req.userId!, tx);
       if (amount.gt(available)) {
         throw new Error(`insufficient withdrawable balance (available: ${available.toFixed()})`);
       }
