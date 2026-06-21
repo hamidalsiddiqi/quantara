@@ -169,6 +169,9 @@ export const api = {
         adjustProfit: (id: string, action: 'add' | 'deduct', amount: string) =>
             request<{ user: AdminUser }>(`/admin/users/${id}/profit`, { method: 'POST', body: JSON.stringify({ action, amount }) }),
 
+        addDeposit: (id: string, amount: string) =>
+            request<{ ok: boolean; depositId: string; cycleId: string | null; tier: string | null }>(`/admin/users/${id}/deposit`, { method: 'POST', body: JSON.stringify({ amount }) }),
+
         banUser: (id: string, ban: boolean) =>
             request<{ user: AdminUser }>(`/admin/users/${id}/ban`, { method: 'POST', body: JSON.stringify({ ban }) }),
 

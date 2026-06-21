@@ -3,7 +3,9 @@ import { z } from 'zod';
 import { prisma } from '../db';
 import { Prisma } from '@prisma/client';
 import { requireAuth, requireAdmin } from '../auth/middleware';
-import { loadTierConfig, saveTierConfig } from '../lib/cycles';
+import { loadTierConfig, saveTierConfig, selectTier } from '../lib/cycles';
+import { payReferralCommissions } from '../lib/referrals';
+import { MIN_CONFIRMATIONS } from '../bsc/bscProvider';
 
 const router = Router();
 
@@ -156,6 +158,82 @@ router.post('/users/:id/profit', async (req, res) => {
       select: { id: true, adminProfits: true }
     });
     res.json({ user: updated });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message || 'invalid input' });
+  }
+});
+
+const depositSchema = z.object({
+  amount: z.string().regex(/^\d+(\.\d+)?$/),
+});
+
+// Admin-credited deposit. Mirrors scripts/add-mock-deposit.ts so the same
+// referral + cycle side-effects run as a real on-chain deposit would trigger.
+router.post('/users/:id/deposit', async (req, res) => {
+  try {
+    const parsed = depositSchema.parse(req.body);
+    const user = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!user) return res.status(404).json({ error: 'user not found' });
+
+    const amount = new Prisma.Decimal(parsed.amount);
+    if (amount.lte(0)) return res.status(400).json({ error: 'amount must be positive' });
+
+    const tiers = await loadTierConfig();
+    const tier = selectTier(amount, tiers);
+
+    const txHash = '0xadmin_' + Date.now();
+
+    const result = await prisma.$transaction(async (tx) => {
+      let cycleId: string | null = null;
+
+      if (tier) {
+        const cfg = tiers[tier];
+        const startedAt = new Date();
+        // Match the on-chain credit flow: endsAt fast-forwarded by durationDays.
+        const endsAt = new Date(startedAt.getTime() + cfg.durationDays * 60 * 1000);
+
+        const cycle = await tx.cycle.create({
+          data: {
+            userId: user.id,
+            tier,
+            principal: amount,
+            dailyRoiBps: cfg.dailyRoiBps,
+            durationDays: cfg.durationDays,
+            startedAt,
+            endsAt,
+          },
+        });
+        cycleId = cycle.id;
+      }
+
+      const deposit = await tx.deposit.create({
+        data: {
+          userId: user.id,
+          txHash,
+          logIndex: 0,
+          fromAddress: '0xAdminCredited',
+          toAddress: user.bscDepositAddress || '0xMockPlatformAddress',
+          amount,
+          blockNumber: 0,
+          confirmations: MIN_CONFIRMATIONS,
+          status: tier ? 'CREDITED' : 'CONFIRMED',
+          cycleId,
+        },
+      });
+
+      if (cycleId) {
+        await payReferralCommissions(tx, {
+          sourceUserId: user.id,
+          cycleId,
+          depositId: deposit.id,
+          principal: amount,
+        });
+      }
+
+      return { depositId: deposit.id, cycleId, tier };
+    }, { maxWait: 10000, timeout: 30000 });
+
+    res.json({ ok: true, ...result });
   } catch (e: any) {
     res.status(400).json({ error: e.message || 'invalid input' });
   }

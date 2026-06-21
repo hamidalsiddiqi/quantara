@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { formatDate, shortAddress, formatUSDT } from '@/lib/utils';
-import { Loader2, Users, ShieldAlert, ShieldCheck, Coins, TrendingUp } from 'lucide-react';
+import { Loader2, Users, ShieldAlert, ShieldCheck, Coins, TrendingUp, ArrowDownToLine } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 
 export default function AdminUsers() {
@@ -40,6 +40,20 @@ export default function AdminUsers() {
         try {
             await api.admin.adjustProfit(u.id, action, amount);
             toast({ title: 'Success', description: 'Profits updated' });
+            refetch();
+        } catch (e: any) {
+            toast({ title: 'Error', description: e.message, variant: 'destructive' });
+        }
+    };
+
+    const handleAddDeposit = async (u: AdminUser) => {
+        const input = window.prompt(`Enter deposit amount (USDT) to credit for ${u.username}. This opens a cycle and pays referral commissions.`);
+        if (!input) return;
+        const val = parseFloat(input);
+        if (isNaN(val) || val <= 0) return toast({ title: 'Invalid amount', variant: 'destructive' });
+        try {
+            const res = await api.admin.addDeposit(u.id, val.toString());
+            toast({ title: 'Deposit credited', description: res.tier ? `Cycle opened (${res.tier})` : 'Recorded (below tier minimum, no cycle)' });
             refetch();
         } catch (e: any) {
             toast({ title: 'Error', description: e.message, variant: 'destructive' });
@@ -146,6 +160,9 @@ export default function AdminUsers() {
                                                 {formatDate(u.createdAt)}
                                             </TableCell>
                                             <TableCell className="text-right space-x-1">
+                                                <Button variant="outline" size="sm" className="h-7 w-7 p-0" title="Add Deposit (opens cycle + referrals)" onClick={() => handleAddDeposit(u)}>
+                                                    <ArrowDownToLine className="h-3.5 w-3.5 text-amber-500" />
+                                                </Button>
                                                 <Button variant="outline" size="sm" className="h-7 w-7 p-0" title="Adjust Balance" onClick={() => handleAdjustBalance(u)}>
                                                     <Coins className="h-3.5 w-3.5 text-cyan-500" />
                                                 </Button>
