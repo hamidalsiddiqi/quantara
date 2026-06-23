@@ -53,6 +53,30 @@ async function getUpline(
   return out;
 }
 
+/// Count the user's downline members at each level (1..REFERRAL_MAX_LEVEL).
+/// Level 1 = direct referrals, level 2 = their referrals, etc. Walks the tree
+/// breadth-first, one query per level. Returns an array indexed by level-1.
+export async function getDownlineCountsByLevel(
+  userId: string,
+  client: Prisma.TransactionClient | PrismaClient = prisma,
+): Promise<number[]> {
+  const counts: number[] = [];
+  let currentIds = [userId];
+  for (let level = 1; level <= REFERRAL_MAX_LEVEL; level++) {
+    if (currentIds.length === 0) {
+      counts.push(0);
+      continue;
+    }
+    const children = await client.user.findMany({
+      where: { referrerId: { in: currentIds } },
+      select: { id: true },
+    });
+    counts.push(children.length);
+    currentIds = children.map((c) => c.id);
+  }
+  return counts;
+}
+
 /// Credit referral commissions for a deposit cycle. Uses the provided tx client so callers
 /// can include it in the same atomic transaction that creates the deposit + cycle.
 export async function payReferralCommissions(

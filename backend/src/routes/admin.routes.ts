@@ -4,7 +4,8 @@ import { prisma } from '../db';
 import { Prisma } from '@prisma/client';
 import { requireAuth, requireAdmin } from '../auth/middleware';
 import { loadTierConfig, saveTierConfig, selectTier } from '../lib/cycles';
-import { payReferralCommissions } from '../lib/referrals';
+import { payReferralCommissions, getReferralEarningsTotal, getTeamVolume, getDownlineCountsByLevel } from '../lib/referrals';
+import { getWithdrawableBalance } from '../lib/balance';
 import { MIN_CONFIRMATIONS } from '../bsc/bscProvider';
 
 const router = Router();
@@ -29,7 +30,134 @@ router.get('/users', async (_req, res) => {
       _count: { select: { cycles: true, deposits: true, withdrawals: true } },
     },
   });
-  res.json({ users });
+
+  const userIds = users.map((u) => u.id);
+
+  // Compute each user's real balance and profit the same way the dashboard
+  // does (see lib/balance.ts + dashboard.routes.ts), batched via groupBy so we
+  // don't issue per-user queries:
+  //   balance = sum(earnings) + sum(referralEarnings) + adminBalance - sum(non-failed withdrawals)
+  //   profit  = sum(ROI earnings) + adminProfits
+  const [earningsByUser, roiByUser, referralByUser, withdrawalsByUser] = await Promise.all([
+    prisma.earning.groupBy({
+      by: ['userId'],
+      where: { userId: { in: userIds } },
+      _sum: { amount: true },
+    }),
+    prisma.earning.groupBy({
+      by: ['userId'],
+      where: { userId: { in: userIds }, kind: 'ROI' },
+      _sum: { amount: true },
+    }),
+    prisma.referralEarning.groupBy({
+      by: ['userId'],
+      where: { userId: { in: userIds } },
+      _sum: { amount: true },
+    }),
+    prisma.withdrawal.groupBy({
+      by: ['userId'],
+      where: { userId: { in: userIds }, status: { in: ['PENDING', 'SIGNED', 'BROADCAST', 'CONFIRMED'] } },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  const sumMap = (
+    rows: { userId: string; _sum: { amount: Prisma.Decimal | null } }[],
+  ): Map<string, Prisma.Decimal> => {
+    const m = new Map<string, Prisma.Decimal>();
+    for (const r of rows) m.set(r.userId, r._sum.amount ?? new Prisma.Decimal(0));
+    return m;
+  };
+
+  const earnings = sumMap(earningsByUser);
+  const roi = sumMap(roiByUser);
+  const referrals = sumMap(referralByUser);
+  const withdrawals = sumMap(withdrawalsByUser);
+  const zero = new Prisma.Decimal(0);
+
+  const enriched = users.map((u) => {
+    const balance = (earnings.get(u.id) ?? zero)
+      .add(referrals.get(u.id) ?? zero)
+      .add(u.adminBalance)
+      .sub(withdrawals.get(u.id) ?? zero);
+    const profit = (roi.get(u.id) ?? zero).add(u.adminProfits);
+    return {
+      ...u,
+      balance: balance.toFixed(),
+      profit: profit.toFixed(),
+    };
+  });
+
+  res.json({ users: enriched });
+});
+
+// Full detail for a single user — loaded when an admin opens the user card.
+router.get('/users/:id', async (req, res) => {
+  const id = req.params.id;
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      isAdmin: true,
+      isBanned: true,
+      adminBalance: true,
+      adminProfits: true,
+      bscDepositAddress: true,
+      bscWithdrawAddress: true,
+      referralCode: true,
+      referrerId: true,
+      createdAt: true,
+      referrer: { select: { username: true, email: true } },
+      _count: { select: { cycles: true, deposits: true, withdrawals: true, referrals: true } },
+    },
+  });
+  if (!user) {
+    res.status(404).json({ error: 'user not found' });
+    return;
+  }
+
+  const [
+    balance,
+    roiAgg,
+    totalDepositAgg,
+    teamVolume,
+    referralEarnings,
+    referralCountsByLevel,
+    recentDeposits,
+    recentWithdrawals,
+    recentCycles,
+  ] = await Promise.all([
+    getWithdrawableBalance(id),
+    prisma.earning.aggregate({ where: { userId: id, kind: 'ROI' }, _sum: { amount: true } }),
+    prisma.deposit.aggregate({
+      where: { userId: id, status: { in: ['CONFIRMED', 'CREDITED'] } },
+      _sum: { amount: true },
+    }),
+    getTeamVolume(id),
+    getReferralEarningsTotal(id),
+    getDownlineCountsByLevel(id),
+    prisma.deposit.findMany({ where: { userId: id }, orderBy: { createdAt: 'desc' }, take: 10 }),
+    prisma.withdrawal.findMany({ where: { userId: id }, orderBy: { createdAt: 'desc' }, take: 10 }),
+    prisma.cycle.findMany({ where: { userId: id }, orderBy: { startedAt: 'desc' }, take: 10 }),
+  ]);
+
+  const profit = (roiAgg._sum.amount ?? new Prisma.Decimal(0)).add(user.adminProfits);
+  const totalDeposit = totalDepositAgg._sum.amount ?? new Prisma.Decimal(0);
+
+  res.json({
+    user,
+    balance: balance.toFixed(),
+    profit: profit.toFixed(),
+    totalDeposit: totalDeposit.toFixed(),
+    teamVolume: teamVolume.toFixed(),
+    referralEarnings: referralEarnings.toFixed(),
+    referralCountsByLevel,
+    recentDeposits,
+    recentWithdrawals,
+    recentCycles,
+  });
 });
 
 router.get('/withdrawals', async (req, res) => {

@@ -12,8 +12,14 @@ import referralRoutes from './routes/referral.routes';
 
 import { startRoiAccrual } from './workers/roiAccrual';
 import { startWithdrawProcessor } from './workers/withdrawProcessor';
+import { startDepositSweepWorker } from './workers/depositSweepWorker';
 
 const app = express();
+
+// Render (and most PaaS) front the app with a reverse proxy that sets
+// X-Forwarded-For. Trust the first hop so express-rate-limit can derive the
+// real client IP instead of throwing ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
+app.set('trust proxy', 1);
 
 app.use(cors({ origin: env.CORS_ORIGIN, credentials: false }));
 app.use(express.json({ limit: '128kb' }));
@@ -42,6 +48,7 @@ app.listen(port, () => {
   if (enableWorkers) {
     startRoiAccrual();
     startWithdrawProcessor();
+    startDepositSweepWorker();
   } else {
     console.log('[workers] disabled via DISABLE_WORKERS=1');
   }

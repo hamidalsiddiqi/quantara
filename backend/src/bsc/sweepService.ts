@@ -4,59 +4,74 @@ import {
   getProvider,
   getAdminSigner,
   USDT_ADDRESS,
-  USDC_ADDRESS,
-  BTCB_ADDRESS,
-  ETH_ADDRESS,
   ERC20_ABI,
   SWEEP_GAS_BNB,
 } from './bscProvider';
 import { deriveSigner } from './hdWalletService';
 
-const SWEEP_TOKENS: { symbol: string; address: string }[] = [
-  { symbol: 'USDT', address: USDT_ADDRESS },
-  { symbol: 'USDC', address: USDC_ADDRESS },
-  { symbol: 'BTCB', address: BTCB_ADDRESS },
-  { symbol: 'ETH', address: ETH_ADDRESS },
-].filter((t) => !!t.address);
+/// Outcome of a sweep attempt. `ok` means the USDT (if any) is now in the admin
+/// wallet, so the deposit is safe to credit. On failure the deposit must stay
+/// AWAITING_SWEEP and be retried — never credited.
+export interface SweepResult {
+  ok: boolean;
+  usdtTxHash?: string;
+  error?: string;
+}
 
-/// Sweep stablecoin balances from a user's derived deposit address into the
-/// admin wallet. Sends BNB for gas from the admin signer first, then transfers
-/// each non-zero token balance. Best-effort: failures are logged.
-export async function sweepUserAddress(userId: string): Promise<void> {
+function errMsg(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  try {
+    return String(e);
+  } catch {
+    return 'unknown error';
+  }
+}
+
+/// Sweep the user's USDT deposit balance into the admin wallet. Sends BNB for
+/// gas from the admin signer first, then transfers the USDT. Returns a
+/// structured result instead of throwing so the caller can gate crediting on a
+/// successful sweep. A best-effort BNB dust sweep runs afterward and does not
+/// affect the result.
+export async function sweepUserAddress(userId: string): Promise<SweepResult> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { bscDepositIndex: true, bscDepositAddress: true },
   });
-  if (user?.bscDepositIndex === null || user?.bscDepositIndex === undefined || !user.bscDepositAddress) return;
+  if (user?.bscDepositIndex === null || user?.bscDepositIndex === undefined || !user.bscDepositAddress) {
+    return { ok: false, error: 'user has no derived deposit address' };
+  }
+  if (!USDT_ADDRESS) {
+    return { ok: false, error: 'USDT contract address not configured' };
+  }
 
   const provider = getProvider();
   const userWallet = deriveSigner(user.bscDepositIndex);
   const admin = getAdminSigner();
+  const usdt = new Contract(USDT_ADDRESS, ERC20_ABI, userWallet);
 
-  const balances = await Promise.all(SWEEP_TOKENS.map(async (tok) => {
-    const c = new Contract(tok.address, ERC20_ABI, userWallet);
-    const bal: bigint = await c.balanceOf(user.bscDepositAddress!);
-    return { ...tok, balance: bal, contract: c };
-  }));
+  let usdtTxHash: string | undefined;
+  try {
+    const balance: bigint = await usdt.balanceOf(user.bscDepositAddress);
 
-  const nonZero = balances.filter((b) => b.balance > 0n);
-  if (nonZero.length === 0) return;
+    if (balance > 0n) {
+      // Fund the deposit address with gas from the admin wallet, then move USDT.
+      const gasNeeded = parseEther(SWEEP_GAS_BNB);
+      const fundTx = await admin.sendTransaction({ to: user.bscDepositAddress, value: gasNeeded });
+      await fundTx.wait(1);
+      console.log(`[sweep] funded ${user.bscDepositAddress} with ${SWEEP_GAS_BNB} BNB tx=${fundTx.hash}`);
 
-  const gasNeeded = parseEther('0.0009');
-  const fundTx = await admin.sendTransaction({ to: user.bscDepositAddress, value: gasNeeded });
-  await fundTx.wait(1);
-  console.log(`[sweep] funded ${user.bscDepositAddress} with ${SWEEP_GAS_BNB} BNB tx=${fundTx.hash}`);
-
-  for (const tok of nonZero) {
-    try {
-      const transferTx = await tok.contract.transfer(admin.address, tok.balance);
+      const transferTx = await usdt.transfer(admin.address, balance);
       await transferTx.wait(1);
-      console.log(`[sweep] swept ${formatUnits(tok.balance, 18)} ${tok.symbol} from ${user.bscDepositAddress} to admin tx=${transferTx.hash}`);
-    } catch (e) {
-      console.error(`[sweep] ${tok.symbol} transfer failed for ${user.bscDepositAddress}:`, e);
+      usdtTxHash = transferTx.hash;
+      console.log(`[sweep] swept ${formatUnits(balance, 18)} USDT from ${user.bscDepositAddress} to admin tx=${transferTx.hash}`);
     }
+    // balance === 0n: nothing to sweep, which is still a success for gating.
+  } catch (e) {
+    console.error(`[sweep] USDT sweep failed for ${user.bscDepositAddress}:`, e);
+    return { ok: false, error: errMsg(e) };
   }
 
+  // Best-effort: recover leftover BNB dust. Never affects the sweep result.
   try {
     const reserve = parseEther(SWEEP_GAS_BNB);
     const bnbBalance = await provider.getBalance(user.bscDepositAddress);
@@ -80,4 +95,6 @@ export async function sweepUserAddress(userId: string): Promise<void> {
   } catch (e) {
     console.error(`[sweep] BNB sweep failed for ${user.bscDepositAddress}:`, e);
   }
+
+  return { ok: true, usdtTxHash };
 }

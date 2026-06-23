@@ -9,9 +9,7 @@ import {
   MIN_CONFIRMATIONS,
 } from '../bsc/bscProvider';
 import { unitsToDecimal, USDT_DECIMALS } from '../lib/money';
-import { loadTierConfig, selectTier } from '../lib/cycles';
-import { payReferralCommissions } from '../lib/referrals';
-import { sweepUserAddress } from '../bsc/sweepService';
+import { recordAwaitingSweep, attemptSweepAndCredit } from '../lib/depositCredit';
 
 const LAST_BLOCK_KEY = 'deposit.lastScannedBlock';
 const TRANSFER_TOPIC = keccakId('Transfer(address,address,uint256)');
@@ -55,82 +53,14 @@ async function creditDeposit(args: {
   amount: Prisma.Decimal;
   blockNumber: number;
 }): Promise<void> {
-  const tiers = await loadTierConfig();
-  const tier = selectTier(args.amount, tiers);
-
-  await prisma.$transaction(async (tx) => {
-    const existing = await tx.deposit.findUnique({ where: { txHash: args.txHash } });
-    if (existing && existing.status === 'CREDITED') return;
-
-    if (!tier) {
-      // Amount below minimum or doesn't fit a tier — record but don't open a cycle.
-      await tx.deposit.upsert({
-        where: { txHash: args.txHash },
-        create: {
-          userId: args.userId,
-          txHash: args.txHash,
-          logIndex: args.logIndex,
-          fromAddress: args.fromAddress,
-          toAddress: args.toAddress,
-          amount: args.amount,
-          blockNumber: args.blockNumber,
-          confirmations: MIN_CONFIRMATIONS,
-          status: 'CONFIRMED',
-        },
-        update: { confirmations: MIN_CONFIRMATIONS, status: 'CONFIRMED' },
-      });
-      return;
-    }
-
-    const cfg = tiers[tier];
-    const startedAt = new Date();
-    const endsAt = new Date(startedAt.getTime() + cfg.durationDays * 60 * 1000);
-
-    const cycle = await tx.cycle.create({
-      data: {
-        userId: args.userId,
-        tier,
-        principal: args.amount,
-        dailyRoiBps: cfg.dailyRoiBps,
-        durationDays: cfg.durationDays,
-        startedAt,
-        endsAt,
-      },
-    });
-
-    const deposit = await tx.deposit.upsert({
-      where: { txHash: args.txHash },
-      create: {
-        userId: args.userId,
-        txHash: args.txHash,
-        logIndex: args.logIndex,
-        fromAddress: args.fromAddress,
-        toAddress: args.toAddress,
-        amount: args.amount,
-        blockNumber: args.blockNumber,
-        confirmations: MIN_CONFIRMATIONS,
-        status: 'CREDITED',
-        cycleId: cycle.id,
-      },
-      update: {
-        confirmations: MIN_CONFIRMATIONS,
-        status: 'CREDITED',
-        cycleId: cycle.id,
-      },
-    });
-
-    await payReferralCommissions(tx, {
-      sourceUserId: args.userId,
-      cycleId: cycle.id,
-      depositId: deposit.id,
-      principal: args.amount,
-    });
-  });
-
-  // Best-effort: sweep funds out of the deposit address into admin wallet.
-  sweepUserAddress(args.userId).catch((e) =>
-    console.error('[depositWatcher] sweep failed for', args.userId, e),
-  );
+  // Gate crediting on a successful sweep (see lib/depositCredit). Record the
+  // transfer as AWAITING_SWEEP, then sweep + credit. If the sweep fails the
+  // deposit stays AWAITING_SWEEP and the sweep worker retries it later.
+  const deposit = await recordAwaitingSweep(args);
+  const outcome = await attemptSweepAndCredit(deposit);
+  if (outcome.status === 'pending_sweep') {
+    console.log(`[depositWatcher] ${args.txHash} awaiting sweep: ${outcome.error ?? ''}`);
+  }
 }
 
 async function scanRange(fromBlock: number, toBlock: number, addrMap: Map<string, DepositUser>): Promise<void> {

@@ -92,6 +92,7 @@ model Earning {
 
 enum DepositStatus {
   PENDING
+  AWAITING_SWEEP
   CONFIRMED
   CREDITED
   FAILED
@@ -112,8 +113,17 @@ model Deposit {
   cycleId       String?
   createdAt     DateTime      @default(now())
 
+  // Sweep gating: a deposit is only credited after its USDT has been swept to
+  // the admin wallet. While AWAITING_SWEEP these track retry state.
+  sweepTxHash        String?
+  sweptAt            DateTime?
+  sweepAttempts      Int       @default(0)
+  lastSweepError     String?
+  nextSweepAttemptAt DateTime?
+
   @@index([status])
   @@index([userId, createdAt])
+  @@index([status, nextSweepAttemptAt])
 }
 
 enum WithdrawStatus {

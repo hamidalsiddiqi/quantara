@@ -130,7 +130,7 @@ export const api = {
         history: () => request<{ items: Deposit[] }>('/deposit/history'),
 
         verify: (body: { txHash: string }) =>
-            request<{ ok: boolean; amount: string; tier: string }>('/deposit/verify', {
+            request<{ ok: boolean; status: 'credited' | 'pending_sweep'; amount: string; tier?: string | null }>('/deposit/verify', {
                 method: 'POST',
                 body: JSON.stringify(body),
             }),
@@ -162,6 +162,9 @@ export const api = {
             request<{
                 users: AdminUser[];
             }>('/admin/users'),
+
+        userDetail: (id: string) =>
+            request<AdminUserDetail>(`/admin/users/${id}`),
 
         adjustBalance: (id: string, action: 'add' | 'deduct', amount: string) =>
             request<{ user: AdminUser }>(`/admin/users/${id}/balance`, { method: 'POST', body: JSON.stringify({ action, amount }) }),
@@ -219,7 +222,7 @@ export interface Deposit {
     amount: string;
     blockNumber: number;
     confirmations: number;
-    status: 'PENDING' | 'CONFIRMED' | 'CREDITED' | 'FAILED';
+    status: 'PENDING' | 'AWAITING_SWEEP' | 'CONFIRMED' | 'CREDITED' | 'FAILED';
     createdAt: string;
 }
 
@@ -244,10 +247,40 @@ export interface AdminUser {
     isBanned: boolean;
     adminBalance: string;
     adminProfits: string;
+    balance: string;
+    profit: string;
     bscDepositAddress?: string | null;
     bscWithdrawAddress?: string | null;
     createdAt: string;
     _count: { cycles: number; deposits: number; withdrawals: number };
+}
+
+export interface AdminUserDetail {
+    user: {
+        id: string;
+        email: string;
+        username: string;
+        isAdmin: boolean;
+        isBanned: boolean;
+        adminBalance: string;
+        adminProfits: string;
+        bscDepositAddress?: string | null;
+        bscWithdrawAddress?: string | null;
+        referralCode?: string | null;
+        referrerId?: string | null;
+        createdAt: string;
+        referrer?: { username: string; email: string } | null;
+        _count: { cycles: number; deposits: number; withdrawals: number; referrals: number };
+    };
+    balance: string;
+    profit: string;
+    totalDeposit: string;
+    teamVolume: string;
+    referralEarnings: string;
+    referralCountsByLevel: number[];
+    recentDeposits: Deposit[];
+    recentWithdrawals: Withdrawal[];
+    recentCycles: Cycle[];
 }
 
 export interface WithdrawalAdmin extends Withdrawal {

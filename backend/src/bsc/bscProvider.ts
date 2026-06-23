@@ -10,23 +10,15 @@ const rpcUrls = env.BSC_RPC_URLS.split(',').map((s) => s.trim()).filter(Boolean)
 const chainId = env.BSC_CHAIN_ID;
 
 export const USDT_ADDRESS = env.USDT_CONTRACT_ADDRESS.trim();
-export const USDC_ADDRESS = env.USDC_CONTRACT_ADDRESS.trim();
-export const BTCB_ADDRESS = env.BTCB_CONTRACT_ADDRESS.trim();
-export const ETH_ADDRESS = env.ETH_CONTRACT_ADDRESS.trim();
 export const VAULT_ADDRESS = env.VAULT_CONTRACT_ADDRESS.trim();
 export const MIN_CONFIRMATIONS = env.MIN_CONFIRMATIONS;
 export const SWEEP_GAS_BNB = '0.0008';
 export const CHAIN_ID = chainId;
 
-export type Currency = 'USDT' | 'USDC' | 'BTCB' | 'ETH';
+export type Currency = 'USDT';
 
-export function tokenAddress(currency: Currency): string {
-  switch (currency) {
-    case 'USDC': return USDC_ADDRESS;
-    case 'BTCB': return BTCB_ADDRESS;
-    case 'ETH': return ETH_ADDRESS;
-    default: return USDT_ADDRESS;
-  }
+export function tokenAddress(_currency: Currency = 'USDT'): string {
+  return USDT_ADDRESS;
 }
 
 export const ERC20_ABI = [

@@ -7,9 +7,7 @@ import { ensureDepositAddress } from '../bsc/hdWalletService';
 import { env } from '../env';
 import { getProvider, USDT_ADDRESS, ERC20_ABI, MIN_CONFIRMATIONS } from '../bsc/bscProvider';
 import { unitsToDecimal, USDT_DECIMALS } from '../lib/money';
-import { loadTierConfig, selectTier } from '../lib/cycles';
-import { payReferralCommissions } from '../lib/referrals';
-import { sweepUserAddress } from '../bsc/sweepService';
+import { recordAwaitingSweep, attemptSweepAndCredit } from '../lib/depositCredit';
 
 const router = Router();
 
@@ -116,74 +114,34 @@ router.post('/verify', async (req, res) => {
     }
 
     const amountDecimal = unitsToDecimal(transferAmount, USDT_DECIMALS);
-    const tiers = await loadTierConfig();
-    const tier = selectTier(amountDecimal, tiers);
 
-    await prisma.$transaction(async (tx) => {
-      // Re-check inside tx
-      const exist = await tx.deposit.findUnique({ where: { txHash } });
-      if (exist) throw new Error('transaction already processed');
-
-      if (!tier) {
-        await tx.deposit.create({
-          data: {
-            userId: user.id,
-            txHash,
-            logIndex: validLog.index,
-            fromAddress: fromAddr,
-            toAddress: myDepositAddress,
-            amount: amountDecimal,
-            blockNumber: receipt.blockNumber,
-            confirmations: MIN_CONFIRMATIONS,
-            status: 'CONFIRMED',
-          },
-        });
-        return;
-      }
-
-      const cfg = tiers[tier];
-      const startedAt = new Date();
-      const endsAt = new Date(startedAt.getTime() + cfg.durationDays * 60 * 1000);
-
-      const cycle = await tx.cycle.create({
-        data: {
-          userId: user.id,
-          tier,
-          principal: amountDecimal,
-          dailyRoiBps: cfg.dailyRoiBps,
-          durationDays: cfg.durationDays,
-          startedAt,
-          endsAt,
-        },
-      });
-
-      const deposit = await tx.deposit.create({
-        data: {
-          userId: user.id,
-          txHash,
-          logIndex: validLog.index,
-          fromAddress: fromAddr,
-          toAddress: myDepositAddress,
-          amount: amountDecimal,
-          blockNumber: receipt.blockNumber,
-          confirmations: MIN_CONFIRMATIONS,
-          status: 'CREDITED',
-          cycleId: cycle.id,
-        },
-      });
-
-      await payReferralCommissions(tx, {
-        sourceUserId: user.id,
-        cycleId: cycle.id,
-        depositId: deposit.id,
-        principal: amountDecimal,
-      });
+    // Gate crediting on a successful sweep: record the deposit as
+    // AWAITING_SWEEP, then sweep the USDT to the admin wallet and only credit
+    // (open cycle + pay referrals) once that succeeds. If the sweep fails the
+    // deposit stays AWAITING_SWEEP and the sweep worker retries it.
+    const deposit = await recordAwaitingSweep({
+      userId: user.id,
+      txHash,
+      logIndex: validLog.index,
+      fromAddress: fromAddr,
+      toAddress: myDepositAddress,
+      amount: amountDecimal,
+      blockNumber: receipt.blockNumber,
     });
 
-    // Best-effort sweep
-    sweepUserAddress(user.id).catch((e) => console.error('[deposit/verify] sweep failed', e));
+    const outcome = await attemptSweepAndCredit(deposit);
 
-    res.json({ ok: true, amount: amountDecimal.toString(), tier });
+    if (outcome.status === 'pending_sweep') {
+      res.json({ ok: true, status: 'pending_sweep', amount: amountDecimal.toString() });
+      return;
+    }
+
+    res.json({
+      ok: true,
+      status: 'credited',
+      amount: amountDecimal.toString(),
+      tier: outcome.status === 'credited' ? outcome.tier : null,
+    });
   } catch (err: any) {
     if (err.message === 'transaction already processed') {
       res.status(400).json({ error: err.message });

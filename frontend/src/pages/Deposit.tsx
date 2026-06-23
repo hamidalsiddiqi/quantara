@@ -13,6 +13,7 @@ import { toast } from '@/components/ui/use-toast';
 
 const depositStatusMap: Record<string, { label: string; variant: any }> = {
     PENDING: { label: 'Pending', variant: 'warning' },
+    AWAITING_SWEEP: { label: 'Crediting…', variant: 'warning' },
     CONFIRMED: { label: 'Confirmed', variant: 'info' },
     CREDITED: { label: 'Credited', variant: 'success' },
     FAILED: { label: 'Failed', variant: 'destructive' },
@@ -32,7 +33,14 @@ export default function Deposit() {
     const verifyMutation = useMutation({
         mutationFn: (txHash: string) => api.deposit.verify({ txHash }),
         onSuccess: (data) => {
-            toast({ title: 'Deposit verified successfully!', description: `Credited ${data.amount} USDT.`, variant: 'success' });
+            if (data.status === 'pending_sweep') {
+                toast({
+                    title: 'Deposit detected',
+                    description: `${data.amount} USDT detected — crediting shortly.`,
+                });
+            } else {
+                toast({ title: 'Deposit verified successfully!', description: `Credited ${data.amount} USDT.`, variant: 'success' });
+            }
             setTxHashInput('');
             qc.invalidateQueries({ queryKey: ['deposit-history'] });
             qc.invalidateQueries({ queryKey: ['dashboard'] });

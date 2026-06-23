@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 
 /// USDT-style decimals. We canonicalize all internal storage at 18 decimals
-/// (Prisma Decimal(36,18)), since BSC USDT/USDC/BTCB/ETH on BSC are all 18d.
+/// (Prisma Decimal(36,18)), since BSC USDT is 18d.
 export const USDT_DECIMALS = 18;
 
 export function toDecimal(value: string | number | bigint): Prisma.Decimal {
