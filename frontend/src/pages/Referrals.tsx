@@ -52,8 +52,8 @@ export default function Referrals() {
         if (navigator.share) {
             try {
                 await navigator.share({
-                    title: 'Join Quantara',
-                    text: 'Start earning daily USDT returns on Quantara — use my referral link:',
+                    title: 'Join Quantalix',
+                    text: 'Start earning daily USDT returns on Quantalix — use my referral link:',
                     url: referralLink,
                 });
             } catch {

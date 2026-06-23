@@ -1,8 +1,8 @@
-# Plan: Quantara — USDT Investment Platform (Vite + Node + Neon + BSC)
+# Plan: Quantalix — USDT Investment Platform (Vite + Node + Neon + BSC)
 
 ## Context
 
-Building a greenfield USDT investment website at `D:\Dev\BrineGold\Quantara`. The directory currently contains only `Bsc Service Example/` with three reference files (`bscProvider.ts`, `hdWalletService.ts`, `sweepService.ts`) that establish the BSC integration pattern: HD wallet–derived per-user deposit addresses, a sweep worker that consolidates incoming USDT into an admin wallet, and a vault contract pattern for signed automated withdrawals.
+Building a greenfield USDT investment website at `D:\Dev\BrineGold\Quantalix`. The directory currently contains only `Bsc Service Example/` with three reference files (`bscProvider.ts`, `hdWalletService.ts`, `sweepService.ts`) that establish the BSC integration pattern: HD wallet–derived per-user deposit addresses, a sweep worker that consolidates incoming USDT into an admin wallet, and a vault contract pattern for signed automated withdrawals.
 
 The app needs to:
 - Onboard users (email + password, JWT).
@@ -26,7 +26,7 @@ User decisions made up-front:
 ## Repository layout
 
 ```
-Quantara/
+Quantalix/
 ├── backend/
 │   ├── src/
 │   │   ├── index.ts                  # Express bootstrap + worker startup

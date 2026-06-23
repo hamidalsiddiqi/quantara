@@ -322,7 +322,7 @@ export default function Dashboard() {
                     {/* Left: Branding + greeting */}
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[10px] font-semibold uppercase tracking-widest text-cyan-400/70 border border-cyan-400/20 rounded-full px-2 py-0.5 bg-cyan-400/5">Quantara Platform</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-widest text-cyan-400/70 border border-cyan-400/20 rounded-full px-2 py-0.5 bg-cyan-400/5">Quantalix Platform</span>
                         </div>
                         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
                             Welcome back, <span className="text-brand-gradient">{user?.username ?? 'Investor'}</span>!

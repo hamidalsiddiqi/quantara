@@ -5,6 +5,7 @@ import { MIN_CONFIRMATIONS } from '../bsc/bscProvider';
 import { loadTierConfig, selectTier } from './cycles';
 import { payReferralCommissions } from './referrals';
 import { sweepUserAddress } from '../bsc/sweepService';
+import { sendDepositNotificationEmail } from './email';
 
 /// Shared deposit-crediting pipeline used by both the user-triggered
 /// `POST /deposit/verify` route and the on-chain `depositWatcher`.
@@ -162,5 +163,18 @@ export async function attemptSweepAndCredit(deposit: {
   });
 
   const { tier } = await creditSweptDeposit(deposit.id);
+
+  const fullDeposit = await prisma.deposit.findUnique({
+    where: { id: deposit.id },
+    include: { user: true }
+  });
+  if (fullDeposit && fullDeposit.user) {
+    sendDepositNotificationEmail(
+      fullDeposit.user.email,
+      fullDeposit.amount.toString(),
+      fullDeposit.txHash
+    ).catch((err) => console.error('[depositCredit] Error sending email:', err));
+  }
+
   return { status: 'credited', tier };
 }

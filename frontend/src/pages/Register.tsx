@@ -25,7 +25,7 @@ export default function Register() {
         const code = (fromQuery ?? fromStorage).toUpperCase();
         if (code) {
             setForm((f) => ({ ...f, referralCode: code }));
-            try { localStorage.setItem('qnt_ref', code); } catch {}
+            try { localStorage.setItem('qnt_ref', code); } catch { }
         }
     }, [searchParams]);
 
@@ -47,8 +47,8 @@ export default function Register() {
             if (code) payload.referralCode = code;
             const { user, token } = await api.auth.register(payload);
             login(token, user);
-            try { localStorage.removeItem('qnt_ref'); } catch {}
-            toast({ title: `Welcome to Quantara, ${user.username}!`, variant: 'success' });
+            try { localStorage.removeItem('qnt_ref'); } catch { }
+            toast({ title: `Welcome to Quantalix, ${user.username}!`, variant: 'success' });
             navigate('/dashboard', { replace: true });
         } catch (err: any) {
             setErrors([err.message ?? 'Registration failed']);
@@ -67,7 +67,7 @@ export default function Register() {
             <div className="w-full max-w-md relative">
                 {/* Logo */}
                 <div className="flex items-center justify-center mb-8">
-                    <img src="/logo.png" alt="Quantara" className="h-20 w-auto" />
+                    <img src="/logo.png" alt="Quantalix" className="h-20 w-auto" />
                 </div>
 
                 <Card className="glass border-brand shadow-2xl">

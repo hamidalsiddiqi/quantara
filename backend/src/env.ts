@@ -31,6 +31,13 @@ const schema = z.object({
 
   // Withdrawal fee in basis points (500 = 5%), deducted from the requested amount.
   WITHDRAW_FEE_BPS: z.coerce.number().int().min(0).max(10000).default(500),
+
+  // Email settings
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().default('noreply@quantara.com'),
 });
 
 export const env = schema.parse(process.env);

@@ -62,7 +62,7 @@ export default function Layout() {
         <div className="flex h-full flex-col">
             {/* Logo */}
             <div className="flex items-center px-3 py-5">
-                <img src="/logo.png" alt="Quantara" className="h-12 w-auto" />
+                <img src="/logo.png" alt="Quantalix" className="h-12 w-auto" />
             </div>
 
             <div className="h-px w-full bg-border mb-3" />

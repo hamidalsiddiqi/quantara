@@ -9,6 +9,7 @@ import {
   ERC20_ABI,
 } from '../bsc/bscProvider';
 import { decimalToUnits, USDT_DECIMALS } from '../lib/money';
+import { sendWithdrawalNotificationEmail } from '../lib/email';
 
 /// Mark a withdrawal failed with an error message.
 async function failWithdrawal(id: string, message: string): Promise<void> {
@@ -101,6 +102,16 @@ async function processPending(): Promise<void> {
         data: { status: 'CONFIRMED', processedAt: new Date() },
       });
       console.log(`[withdrawProcessor] CONFIRMED ${w.id} tx=${tx.hash}`);
+
+      const user = await prisma.user.findUnique({ where: { id: w.userId } });
+      if (user) {
+        sendWithdrawalNotificationEmail(
+          user.email,
+          w.amount.toString(),
+          w.netAmount.toString(),
+          tx.hash
+        ).catch(() => { });
+      }
     } catch (e: any) {
       const msg = e?.shortMessage || e?.message || String(e);
       console.error(`[withdrawProcessor] withdrawal ${w.id} failed:`, e);

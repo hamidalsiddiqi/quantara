@@ -4,7 +4,7 @@ import path from 'path';
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '');
-    const devProxyTarget = env.VITE_DEV_API_PROXY || 'https://quantara-0qp4.onrender.com';
+    const devProxyTarget = env.VITE_DEV_API_PROXY || 'https://quantalix-0qp4.onrender.com';
 
     return {
         plugins: [react()],

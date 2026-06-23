@@ -45,7 +45,7 @@ export default function Login() {
             <div className="w-full max-w-md relative">
                 {/* Logo */}
                 <div className="flex items-center justify-center mb-8">
-                    <img src="/logo.png" alt="Quantara" className="h-20 w-auto" />
+                    <img src="/logo.png" alt="Quantalix" className="h-20 w-auto" />
                 </div>
 
                 <Card className="glass border-brand shadow-2xl">

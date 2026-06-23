@@ -6,6 +6,7 @@ import { hashPassword, verifyPassword } from '../auth/password';
 import { signToken } from '../auth/jwt';
 import { requireAuth } from '../auth/middleware';
 import { allocateReferralCode } from '../lib/referrals';
+import { sendWelcomeEmail } from '../lib/email';
 
 const router = Router();
 
@@ -68,6 +69,10 @@ router.post('/register', authLimiter, async (req, res) => {
   });
 
   const token = signToken({ sub: user.id, isAdmin: user.isAdmin });
+
+  // Send welcome email asynchronously
+  sendWelcomeEmail(user.email, user.username).catch(() => { });
+
   res.status(201).json({ user, token });
 });
 
