@@ -9,6 +9,12 @@ const transporter = nodemailer.createTransport({
         user: env.SMTP_USER,
         pass: env.SMTP_PASS,
     } : undefined,
+    tls: {
+        rejectUnauthorized: false // Helps bypass issues with self-signed SSL on shared hosts / cPanel
+    },
+    logger: true,
+    debug: true,
+    connectionTimeout: 15000 // 15 seconds timeout
 });
 
 export async function sendWelcomeEmail(to: string, username: string) {
