@@ -38,7 +38,7 @@ router.get('/users', async (_req, res) => {
   // don't issue per-user queries:
   //   balance = sum(earnings) + sum(referralEarnings) + adminBalance - sum(non-failed withdrawals)
   //   profit  = sum(ROI earnings) + adminProfits
-  const [earningsByUser, roiByUser, referralByUser, withdrawalsByUser] = await Promise.all([
+  const [earningsByUser, roiByUser, referralByUser, withdrawalsByUser, depositsByUser, teamVolRows] = await Promise.all([
     prisma.earning.groupBy({
       by: ['userId'],
       where: { userId: { in: userIds } },
@@ -59,6 +59,16 @@ router.get('/users', async (_req, res) => {
       where: { userId: { in: userIds }, status: { in: ['PENDING', 'SIGNED', 'BROADCAST', 'CONFIRMED'] } },
       _sum: { amount: true },
     }),
+    prisma.deposit.groupBy({
+      by: ['userId'],
+      where: { userId: { in: userIds }, status: { in: ['CONFIRMED', 'CREDITED'] } },
+      _sum: { amount: true },
+    }),
+    prisma.referralEarning.findMany({
+      where: { userId: { in: userIds } },
+      select: { userId: true, cycleId: true, amount: true, bps: true },
+      distinct: ['userId', 'cycleId']
+    }),
   ]);
 
   const sumMap = (
@@ -73,7 +83,15 @@ router.get('/users', async (_req, res) => {
   const roi = sumMap(roiByUser);
   const referrals = sumMap(referralByUser);
   const withdrawals = sumMap(withdrawalsByUser);
+  const deposits = sumMap(depositsByUser);
   const zero = new Prisma.Decimal(0);
+
+  const teamVolMap = new Map<string, Prisma.Decimal>();
+  for (const r of teamVolRows) {
+    const p = r.amount.mul(10000).div(r.bps);
+    const cur = teamVolMap.get(r.userId) ?? zero;
+    teamVolMap.set(r.userId, cur.add(p));
+  }
 
   const enriched = users.map((u) => {
     const balance = (earnings.get(u.id) ?? zero)
@@ -81,10 +99,14 @@ router.get('/users', async (_req, res) => {
       .add(u.adminBalance)
       .sub(withdrawals.get(u.id) ?? zero);
     const profit = (roi.get(u.id) ?? zero).add(u.adminProfits);
+    const totalDeposit = deposits.get(u.id) ?? zero;
+    const teamVolume = teamVolMap.get(u.id) ?? zero;
     return {
       ...u,
       balance: balance.toFixed(),
       profit: profit.toFixed(),
+      totalDeposit: totalDeposit.toFixed(),
+      teamVolume: teamVolume.toFixed(),
     };
   });
 

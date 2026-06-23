@@ -128,8 +128,9 @@ export default function AdminUsers() {
                                         <TableHead>User</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead className="hidden md:table-cell">Balance / Profit</TableHead>
-                                        <TableHead>Cycles</TableHead>
-                                        <TableHead className="hidden lg:table-cell">Deposits</TableHead>
+                                        <TableHead className="hidden md:table-cell">Dep / Vol</TableHead>
+                                        <TableHead className="hidden xl:table-cell">Cycles</TableHead>
+                                        <TableHead className="hidden xl:table-cell">Deposits</TableHead>
                                         <TableHead className="hidden xl:table-cell">Joined</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
@@ -160,8 +161,12 @@ export default function AdminUsers() {
                                                 Bal: {formatUSDT(u.balance || '0')} <br />
                                                 Prof: {formatUSDT(u.profit || '0')}
                                             </TableCell>
-                                            <TableCell>{u._count.cycles}</TableCell>
-                                            <TableCell className="hidden lg:table-cell">{u._count.deposits}</TableCell>
+                                            <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                                                Dep: {formatUSDT(u.totalDeposit || '0')} <br />
+                                                Vol: {formatUSDT(u.teamVolume || '0')}
+                                            </TableCell>
+                                            <TableCell className="hidden xl:table-cell">{u._count.cycles}</TableCell>
+                                            <TableCell className="hidden xl:table-cell">{u._count.deposits}</TableCell>
                                             <TableCell className="hidden xl:table-cell text-xs text-muted-foreground">
                                                 {formatDate(u.createdAt)}
                                             </TableCell>

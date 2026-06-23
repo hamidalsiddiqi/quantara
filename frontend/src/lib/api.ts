@@ -249,6 +249,8 @@ export interface AdminUser {
     adminProfits: string;
     balance: string;
     profit: string;
+    totalDeposit?: string;
+    teamVolume?: string;
     bscDepositAddress?: string | null;
     bscWithdrawAddress?: string | null;
     createdAt: string;
