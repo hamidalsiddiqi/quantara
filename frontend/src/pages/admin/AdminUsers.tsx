@@ -1,15 +1,17 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api, AdminUser } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { formatDate, shortAddress, formatUSDT } from '@/lib/utils';
-import { Loader2, Users, ShieldAlert, ShieldCheck, Coins, TrendingUp, ArrowDownToLine, X } from 'lucide-react';
+import { Loader2, Users, ShieldAlert, ShieldCheck, Coins, TrendingUp, ArrowDownToLine, X, Search } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 
 export default function AdminUsers() {
+    const [search, setSearch] = useState('');
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
     const { data, isLoading, error, refetch } = useQuery({
         queryKey: ['admin-users'],
@@ -74,6 +76,17 @@ export default function AdminUsers() {
         }
     };
 
+    const filteredUsers = useMemo(() => {
+        if (!data) return [];
+        if (!search) return data.users;
+        const s = search.toLowerCase();
+        return data.users.filter(u =>
+            u.username.toLowerCase().includes(s) ||
+            u.email.toLowerCase().includes(s) ||
+            u.id.toLowerCase().includes(s)
+        );
+    }, [data, search]);
+
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-3">
@@ -118,8 +131,18 @@ export default function AdminUsers() {
                     </div>
 
                     <Card>
-                        <CardHeader>
+                        <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle className="text-base">All Users ({data.users.length})</CardTitle>
+                            <div className="relative w-full max-w-sm">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    type="text"
+                                    placeholder="Search by username, email..."
+                                    className="pl-9 h-9"
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                />
+                            </div>
                         </CardHeader>
                         <CardContent>
                             <Table>
@@ -136,56 +159,63 @@ export default function AdminUsers() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {data.users.map((u) => (
-                                        <TableRow
-                                            key={u.id}
-                                            onClick={() => setSelectedUserId(u.id)}
-                                            className={`cursor-pointer hover:bg-muted/40 ${u.isBanned ? 'opacity-50' : ''}`}
-                                        >
-                                            <TableCell>
-                                                <div>
-                                                    <p className="font-medium text-sm flex items-center gap-1.5">
-                                                        {u.username}
-                                                        {u.isAdmin && <Badge variant="warning" className="px-1 py-0 h-4 text-[9px]">ADMIN</Badge>}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">{u.email}</p>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                {u.isBanned
-                                                    ? <Badge variant="destructive">Banned</Badge>
-                                                    : <Badge variant="outline" className="border-emerald-500/30 text-emerald-500">Active</Badge>
-                                                }
-                                            </TableCell>
-                                            <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
-                                                Bal: {formatUSDT(u.balance || '0')} <br />
-                                                Prof: {formatUSDT(u.profit || '0')}
-                                            </TableCell>
-                                            <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
-                                                Dep: {formatUSDT(u.totalDeposit || '0')} <br />
-                                                Vol: {formatUSDT(u.teamVolume || '0')}
-                                            </TableCell>
-                                            <TableCell className="hidden xl:table-cell">{u._count.cycles}</TableCell>
-                                            <TableCell className="hidden xl:table-cell">{u._count.deposits}</TableCell>
-                                            <TableCell className="hidden xl:table-cell text-xs text-muted-foreground">
-                                                {formatDate(u.createdAt)}
-                                            </TableCell>
-                                            <TableCell className="text-right space-x-1" onClick={(e) => e.stopPropagation()}>
-                                                <Button variant="outline" size="sm" className="h-7 w-7 p-0" title="Add Deposit (opens cycle + referrals)" onClick={() => handleAddDeposit(u)}>
-                                                    <ArrowDownToLine className="h-3.5 w-3.5 text-amber-500" />
-                                                </Button>
-                                                <Button variant="outline" size="sm" className="h-7 w-7 p-0" title="Adjust Balance" onClick={() => handleAdjustBalance(u)}>
-                                                    <Coins className="h-3.5 w-3.5 text-cyan-500" />
-                                                </Button>
-                                                <Button variant="outline" size="sm" className="h-7 w-7 p-0" title="Adjust Profits" onClick={() => handleAdjustProfit(u)}>
-                                                    <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-                                                </Button>
-                                                <Button variant="outline" size="sm" className="h-7 w-7 p-0 hover:bg-destructive hover:text-white" title={u.isBanned ? "Unban" : "Ban"} onClick={() => handleToggleBan(u)}>
-                                                    {u.isBanned ? <ShieldCheck className="h-3.5 w-3.5" /> : <ShieldAlert className="h-3.5 w-3.5" />}
-                                                </Button>
+                                    {filteredUsers.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                                                No users found matching "{search}".
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                    ) : (
+                                        filteredUsers.map((u) => (
+                                            <TableRow
+                                                key={u.id}
+                                                onClick={() => setSelectedUserId(u.id)}
+                                                className={`cursor-pointer hover:bg-muted/40 ${u.isBanned ? 'opacity-50' : ''}`}
+                                            >
+                                                <TableCell>
+                                                    <div>
+                                                        <p className="font-medium text-sm flex items-center gap-1.5">
+                                                            {u.username}
+                                                            {u.isAdmin && <Badge variant="warning" className="px-1 py-0 h-4 text-[9px]">ADMIN</Badge>}
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">{u.email}</p>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {u.isBanned
+                                                        ? <Badge variant="destructive">Banned</Badge>
+                                                        : <Badge variant="outline" className="border-emerald-500/30 text-emerald-500">Active</Badge>
+                                                    }
+                                                </TableCell>
+                                                <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                                                    Bal: {formatUSDT(u.balance || '0')} <br />
+                                                    Prof: {formatUSDT(u.profit || '0')}
+                                                </TableCell>
+                                                <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                                                    Dep: {formatUSDT(u.totalDeposit || '0')} <br />
+                                                    Vol: {formatUSDT(u.teamVolume || '0')}
+                                                </TableCell>
+                                                <TableCell className="hidden xl:table-cell">{u._count.cycles}</TableCell>
+                                                <TableCell className="hidden xl:table-cell">{u._count.deposits}</TableCell>
+                                                <TableCell className="hidden xl:table-cell text-xs text-muted-foreground">
+                                                    {formatDate(u.createdAt)}
+                                                </TableCell>
+                                                <TableCell className="text-right space-x-1" onClick={(e) => e.stopPropagation()}>
+                                                    <Button variant="outline" size="sm" className="h-7 w-7 p-0" title="Add Deposit (opens cycle + referrals)" onClick={() => handleAddDeposit(u)}>
+                                                        <ArrowDownToLine className="h-3.5 w-3.5 text-amber-500" />
+                                                    </Button>
+                                                    <Button variant="outline" size="sm" className="h-7 w-7 p-0" title="Adjust Balance" onClick={() => handleAdjustBalance(u)}>
+                                                        <Coins className="h-3.5 w-3.5 text-cyan-500" />
+                                                    </Button>
+                                                    <Button variant="outline" size="sm" className="h-7 w-7 p-0" title="Adjust Profits" onClick={() => handleAdjustProfit(u)}>
+                                                        <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+                                                    </Button>
+                                                    <Button variant="outline" size="sm" className="h-7 w-7 p-0 hover:bg-destructive hover:text-white" title={u.isBanned ? "Unban" : "Ban"} onClick={() => handleToggleBan(u)}>
+                                                        {u.isBanned ? <ShieldCheck className="h-3.5 w-3.5" /> : <ShieldAlert className="h-3.5 w-3.5" />}
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        )))}
                                 </TableBody>
                             </Table>
                         </CardContent>
