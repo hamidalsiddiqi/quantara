@@ -49,6 +49,12 @@ export const api = {
             request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
 
         me: () => request<{ user: User }>('/auth/me'),
+
+        forgotPassword: (body: { email: string }) =>
+            request<{ ok: boolean }>('/auth/forgot-password', { method: 'POST', body: JSON.stringify(body) }),
+
+        resetPassword: (body: { token: string; password: string }) =>
+            request<{ ok: boolean }>('/auth/reset-password', { method: 'POST', body: JSON.stringify(body) }),
     },
 
     // ── Referrals ────────────────────────────────────────

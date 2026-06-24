@@ -32,8 +32,21 @@ model User {
   earnings          Earning[]
   referralEarnings  ReferralEarning[] @relation("ReferralEarner")
   sourcedReferrals  ReferralEarning[] @relation("ReferralSource")
+  passwordResets    PasswordReset[]
 
   @@index([referrerId])
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  tokenHash String    @unique // sha256 hex of the raw token emailed to the user
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 enum CycleTier {

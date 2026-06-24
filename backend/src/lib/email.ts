@@ -38,6 +38,49 @@ export async function sendWelcomeEmail(to: string, username: string) {
     }
 }
 
+export async function sendPasswordResetEmail(to: string, username: string, resetUrl: string) {
+    const html = `
+    <h2>Reset your Quantalix password</h2>
+    <p>Hi ${username},</p>
+    <p>We received a request to reset your password. Click the link below to choose a new one:</p>
+    <p><a href="${resetUrl}">Reset my password</a></p>
+    <p>This link expires in 30 minutes. If you didn't request a password reset, you can safely ignore this email — your password will stay the same.</p>
+    <br>
+    <p>The Quantalix Team</p>
+  `;
+    try {
+        await transporter.sendMail({
+            from: env.SMTP_FROM,
+            to,
+            subject: 'Reset your Quantalix password',
+            html,
+        });
+    } catch (err) {
+        console.error('[email] failed to send password reset email', err);
+    }
+}
+
+export async function sendReferralSignupEmail(to: string, referrerUsername: string, newUsername: string) {
+    const html = `
+    <h2>You've got a new team member!</h2>
+    <p>Hi ${referrerUsername},</p>
+    <p>Great news — <strong>${newUsername}</strong> just joined Quantalix using your referral code.</p>
+    <p>When your referrals invest, you earn commissions across multiple levels. Keep sharing your link to grow your team!</p>
+    <br>
+    <p>The Quantalix Team</p>
+  `;
+    try {
+        await transporter.sendMail({
+            from: env.SMTP_FROM,
+            to,
+            subject: "You've got a new team member! - Quantalix",
+            html,
+        });
+    } catch (err) {
+        console.error('[email] failed to send referral signup email', err);
+    }
+}
+
 export async function sendDepositNotificationEmail(to: string, amount: string, txHash: string) {
     const html = `
     <h2>Deposit Confirmed</h2>

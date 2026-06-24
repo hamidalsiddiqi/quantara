@@ -1,12 +1,20 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import rateLimit from 'express-rate-limit';
+import { randomBytes, createHash } from 'crypto';
 import { prisma } from '../db';
+import { env } from '../env';
 import { hashPassword, verifyPassword } from '../auth/password';
 import { signToken } from '../auth/jwt';
 import { requireAuth } from '../auth/middleware';
 import { allocateReferralCode } from '../lib/referrals';
-import { sendWelcomeEmail } from '../lib/email';
+import { sendWelcomeEmail, sendPasswordResetEmail, sendReferralSignupEmail } from '../lib/email';
+
+/// Hash a raw reset token for storage/lookup. We only ever persist the hash so a
+/// leaked database row cannot be used to reset an account.
+function hashResetToken(raw: string): string {
+  return createHash('sha256').update(raw).digest('hex');
+}
 
 const router = Router();
 
@@ -41,10 +49,11 @@ router.post('/register', authLimiter, async (req, res) => {
   }
 
   let referrerId: string | null = null;
+  let referrer: { id: string; email: string; username: string } | null = null;
   if (referralCode) {
-    const referrer = await prisma.user.findUnique({
+    referrer = await prisma.user.findUnique({
       where: { referralCode },
-      select: { id: true },
+      select: { id: true, email: true, username: true },
     });
     if (!referrer) {
       res.status(400).json({ error: 'invalid referral code' });
@@ -72,6 +81,11 @@ router.post('/register', authLimiter, async (req, res) => {
 
   // Send welcome email asynchronously
   sendWelcomeEmail(user.email, user.username).catch(() => { });
+
+  // Notify the sponsor that a new member joined their team.
+  if (referrer) {
+    sendReferralSignupEmail(referrer.email, referrer.username, user.username).catch(() => { });
+  }
 
   res.status(201).json({ user, token });
 });
@@ -134,6 +148,71 @@ router.get('/me', requireAuth, async (req, res) => {
     return;
   }
   res.json({ user });
+});
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email().transform((s) => s.toLowerCase()),
+});
+
+const RESET_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+router.post('/forgot-password', authLimiter, async (req, res) => {
+  const parsed = forgotPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'invalid input' });
+    return;
+  }
+  const { email } = parsed.data;
+
+  const user = await prisma.user.findUnique({ where: { email }, select: { id: true, email: true, username: true } });
+  if (user) {
+    const rawToken = randomBytes(32).toString('hex');
+    await prisma.passwordReset.create({
+      data: {
+        userId: user.id,
+        tokenHash: hashResetToken(rawToken),
+        expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+      },
+    });
+    const resetUrl = `${env.CORS_ORIGIN}/reset-password?token=${rawToken}`;
+    sendPasswordResetEmail(user.email, user.username, resetUrl).catch(() => { });
+  }
+
+  // Always respond the same way to avoid leaking which emails are registered.
+  res.json({ ok: true });
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8).max(128),
+});
+
+router.post('/reset-password', authLimiter, async (req, res) => {
+  const parsed = resetPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'invalid input', details: parsed.error.flatten() });
+    return;
+  }
+  const { token, password } = parsed.data;
+
+  const record = await prisma.passwordReset.findUnique({ where: { tokenHash: hashResetToken(token) } });
+  if (!record || record.usedAt || record.expiresAt <= new Date()) {
+    res.status(400).json({ error: 'invalid or expired token' });
+    return;
+  }
+
+  const passwordHash = await hashPassword(password);
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: record.userId }, data: { passwordHash } }),
+    prisma.passwordReset.update({ where: { id: record.id }, data: { usedAt: new Date() } }),
+    // Invalidate any other outstanding reset tokens for this user.
+    prisma.passwordReset.updateMany({
+      where: { userId: record.userId, usedAt: null, id: { not: record.id } },
+      data: { usedAt: new Date() },
+    }),
+  ]);
+
+  res.json({ ok: true });
 });
 
 export default router;
