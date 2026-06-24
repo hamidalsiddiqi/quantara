@@ -91,7 +91,7 @@ router.post('/register', authLimiter, async (req, res) => {
 });
 
 const loginSchema = z.object({
-  email: z.string().email().transform((s) => s.toLowerCase()),
+  identifier: z.string().trim().min(1),
   password: z.string().min(1),
 });
 
@@ -101,8 +101,13 @@ router.post('/login', authLimiter, async (req, res) => {
     res.status(400).json({ error: 'invalid input' });
     return;
   }
-  const { email, password } = parsed.data;
-  const user = await prisma.user.findUnique({ where: { email } });
+  const { identifier, password } = parsed.data;
+  // Accept either an email address or a username. Emails are stored lowercased;
+  // usernames are matched as-is.
+  const isEmail = identifier.includes('@');
+  const user = await prisma.user.findFirst({
+    where: isEmail ? { email: identifier.toLowerCase() } : { username: identifier },
+  });
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
     res.status(401).json({ error: 'invalid credentials' });
     return;

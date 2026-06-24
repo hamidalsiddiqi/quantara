@@ -45,7 +45,7 @@ export const api = {
         register: (body: { email: string; username: string; password: string; referralCode?: string }) =>
             request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
 
-        login: (body: { email: string; password: string }) =>
+        login: (body: { identifier: string; password: string }) =>
             request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
 
         me: () => request<{ user: User }>('/auth/me'),

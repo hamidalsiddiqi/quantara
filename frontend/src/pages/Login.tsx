@@ -12,7 +12,7 @@ import { toast } from '@/components/ui/use-toast';
 export default function Login() {
     const { login } = useAuth();
     const navigate = useNavigate();
-    const [email, setEmail] = useState('');
+    const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
     const [showPw, setShowPw] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -23,7 +23,7 @@ export default function Login() {
         setError('');
         setLoading(true);
         try {
-            const { user, token } = await api.auth.login({ email, password });
+            const { user, token } = await api.auth.login({ identifier, password });
             login(token, user);
             toast({ title: `Welcome back, ${user.username}!`, variant: 'success' });
             navigate('/dashboard', { replace: true });
@@ -62,14 +62,14 @@ export default function Login() {
                             )}
 
                             <div className="space-y-2">
-                                <Label htmlFor="email">Email address</Label>
+                                <Label htmlFor="identifier">Email or username</Label>
                                 <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="you@example.com"
-                                    autoComplete="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    id="identifier"
+                                    type="text"
+                                    placeholder="you@example.com or username"
+                                    autoComplete="username"
+                                    value={identifier}
+                                    onChange={(e) => setIdentifier(e.target.value)}
                                     required
                                 />
                             </div>
