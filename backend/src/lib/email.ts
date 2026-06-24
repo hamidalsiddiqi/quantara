@@ -19,18 +19,18 @@ const transporter = nodemailer.createTransport({
 
 export async function sendWelcomeEmail(to: string, username: string) {
     const html = `
-    <h1>Welcome to Quantara!</h1>
+    <h1>Welcome to Quantalix!</h1>
     <p>Hi ${username},</p>
     <p>Thank you for registering. We are thrilled to have you on board!</p>
     <br>
     <p>Best Regards,</p>
-    <p>The Quantara Team</p>
+    <p>The Quantalix Team</p>
   `;
     try {
         await transporter.sendMail({
             from: env.SMTP_FROM,
             to,
-            subject: 'Welcome to Quantara!',
+            subject: 'Welcome to Quantalix!',
             html,
         });
     } catch (err) {
@@ -45,13 +45,13 @@ export async function sendDepositNotificationEmail(to: string, amount: string, t
     <p>Transaction Hash: <small>${txHash}</small></p>
     <br>
     <p>Thank you for investing with us!</p>
-    <p>The Quantara Team</p>
+    <p>The Quantalix Team</p>
   `;
     try {
         await transporter.sendMail({
             from: env.SMTP_FROM,
             to,
-            subject: 'Deposit Confirmation - Quantara',
+            subject: 'Deposit Confirmation - Quantalix',
             html,
         });
     } catch (err) {
@@ -69,13 +69,13 @@ export async function sendWithdrawalNotificationEmail(to: string, amount: string
       <li>Transaction Hash: <small>${txHash}</small></li>
     </ul>
     <br>
-    <p>The Quantara Team</p>
+    <p>The Quantalix Team</p>
   `;
     try {
         await transporter.sendMail({
             from: env.SMTP_FROM,
             to,
-            subject: 'Withdrawal Confirmation - Quantara',
+            subject: 'Withdrawal Confirmation - Quantalix',
             html,
         });
     } catch (err) {
