@@ -85,7 +85,7 @@ export async function sendDepositNotificationEmail(to: string, amount: string, t
     const html = `
     <h2>Deposit Confirmed</h2>
     <p>Your deposit of <strong>${amount} USDT</strong> has been successfully processed.</p>
-    <p>Transaction Hash: <small>${txHash}</small></p>
+    <li>Transaction Hash: <small><a href="https://bscscan.com/tx/${txHash}>${txHash}</small></li>
     <br>
     <p>Thank you for investing with us!</p>
     <p>The Quantalix Team</p>
@@ -105,11 +105,11 @@ export async function sendDepositNotificationEmail(to: string, amount: string, t
 export async function sendWithdrawalNotificationEmail(to: string, amount: string, netAmount: string, txHash: string) {
     const html = `
     <h2>Withdrawal Sent!</h2>
-    <p>Your withdrawal has been successfully broadcast to the network.</p>
+    <p>Your withdrawal has been successfully broadcasted to the network.</p>
     <ul>
       <li>Requested Amount: <strong>${amount} USDT</strong></li>
       <li>Net Received (after fee): <strong>${netAmount} USDT</strong></li>
-      <li>Transaction Hash: <small>${txHash}</small></li>
+      <li>Transaction Hash: <small><a href="https://bscscan.com/tx/${txHash}>${txHash}</small></li>
     </ul>
     <br>
     <p>The Quantalix Team</p>
