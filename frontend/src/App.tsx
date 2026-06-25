@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
+import TelegramButton from '@/components/TelegramButton';
 import { ProtectedRoute, AdminRoute } from '@/components/ProtectedRoute';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
@@ -42,6 +43,9 @@ export default function App() {
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
+
+            {/* Floating Telegram button (visible on every page) */}
+            <TelegramButton />
         </BrowserRouter>
     );
 }

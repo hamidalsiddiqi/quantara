@@ -1,7 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { TelegramIcon } from '@/components/TelegramIcon';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
@@ -118,19 +117,7 @@ export default function Login() {
                     </CardContent>
                 </Card>
 
-                <div className="mt-6 flex justify-center">
-                    <a
-                        href="https://t.me/Quantalix"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-                    >
-                        <TelegramIcon className="h-4 w-4" />
-                        Join us on Telegram
-                    </a>
-                </div>
-
-                <p className="mt-4 text-center text-xs text-muted-foreground">
+                <p className="mt-6 text-center text-xs text-muted-foreground">
                     BSC Network · USDT BEP-20 · Daily ROI
                 </p>
             </div>
