@@ -78,7 +78,7 @@ export default function Layout() {
             </div>
 
             {/* Main nav */}
-            <nav className="flex-1 space-y-0.5 px-2">
+            <nav className="flex-1 space-y-0.5 overflow-y-auto px-2">
                 {navItems.map((item) => (
                     <NavItem key={item.to} {...item} />
                 ))}
@@ -144,16 +144,18 @@ export default function Layout() {
             {/* Mobile sidebar (Drawer) */}
             <aside
                 className={cn(
-                    'fixed inset-y-0 left-0 z-[70] w-72 border-r border-border bg-card/95 backdrop-blur-xl transition-all duration-300 ease-in-out lg:hidden',
+                    'fixed inset-y-0 left-0 z-[70] flex w-72 flex-col border-r border-border bg-card/95 backdrop-blur-xl transition-all duration-300 ease-in-out lg:hidden',
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full',
                 )}
             >
-                <div className="flex justify-end p-4">
+                <div className="flex flex-shrink-0 justify-end p-4">
                     <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
                         <X className="h-5 w-5" />
                     </Button>
                 </div>
-                <SidebarContent />
+                <div className="min-h-0 flex-1">
+                    <SidebarContent />
+                </div>
             </aside>
 
             {/* Main content */}
