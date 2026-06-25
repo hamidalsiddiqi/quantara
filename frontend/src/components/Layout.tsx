@@ -172,30 +172,30 @@ export default function Layout() {
                 </main>
 
                 {/* Mobile Bottom Bar */}
-                <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-border bg-card/80 backdrop-blur-xl px-2 lg:hidden">
+                <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around gap-0.5 border-t border-border bg-card/80 backdrop-blur-xl px-1 lg:hidden">
                     {navItems.map((item) => (
                         <NavLink
                             key={item.to}
                             to={item.to}
                             className={({ isActive }) =>
                                 cn(
-                                    "flex flex-col items-center justify-center gap-1.5 px-3 py-1 rounded-xl transition-all duration-200",
+                                    "flex flex-1 min-w-0 flex-col items-center justify-center gap-1 px-1 py-1.5 rounded-xl transition-all duration-200",
                                     isActive
                                         ? "text-primary bg-primary/10 shadow-sm"
                                         : "text-muted-foreground hover:text-foreground"
                                 )
                             }
                         >
-                            <item.icon className={cn("h-5 w-5 transition-transform", "active:scale-95")} />
-                            <span className="text-[10px] font-semibold tracking-wide">{item.label}</span>
+                            <item.icon className={cn("h-5 w-5 flex-shrink-0 transition-transform", "active:scale-95")} />
+                            <span className="max-w-full truncate text-[10px] font-semibold tracking-wide">{item.label}</span>
                         </NavLink>
                     ))}
                     <button
                         onClick={() => setSidebarOpen(true)}
-                        className="flex flex-col items-center justify-center gap-1.5 px-3 py-1 text-muted-foreground hover:text-foreground transition-all"
+                        className="flex flex-1 min-w-0 flex-col items-center justify-center gap-1 px-1 py-1.5 rounded-xl text-muted-foreground hover:text-foreground transition-all"
                     >
-                        <Menu className="h-5 w-5" />
-                        <span className="text-[10px] font-semibold">More</span>
+                        <Menu className="h-5 w-5 flex-shrink-0" />
+                        <span className="max-w-full truncate text-[10px] font-semibold tracking-wide">Menu</span>
                     </button>
                 </nav>
             </div>
