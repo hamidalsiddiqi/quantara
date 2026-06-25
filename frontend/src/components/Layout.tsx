@@ -15,7 +15,10 @@ import {
     Shield,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { TelegramIcon } from '@/components/TelegramIcon';
 import { cn } from '@/lib/utils';
+
+const TELEGRAM_URL = 'https://t.me/Quantalix';
 
 const navItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -96,6 +99,19 @@ export default function Layout() {
                     </>
                 )}
             </nav>
+
+            {/* Telegram */}
+            <div className="px-3 pt-3">
+                <a
+                    href={TELEGRAM_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all duration-150 hover:bg-accent hover:text-foreground"
+                >
+                    <TelegramIcon className="h-4 w-4 flex-shrink-0" />
+                    <span>Telegram</span>
+                </a>
+            </div>
 
             {/* Logout */}
             <div className="p-3">
