@@ -37,7 +37,7 @@ const schema = z.object({
   SMTP_PORT: z.coerce.number().optional(),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  SMTP_FROM: z.string().default('noreply@quantara.com'),
+  SMTP_FROM: z.string().default('noreply@quantalix.com'),
 });
 
 export const env = schema.parse(process.env);

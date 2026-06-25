@@ -160,7 +160,7 @@ export default function Layout() {
             <div className="flex flex-1 flex-col min-w-0">
                 {/* Mobile topbar (Branding only) */}
                 <header className="fixed top-0 left-0 right-0 z-50 flex h-12 items-center border-b border-border bg-background/70 backdrop-blur-md px-4 lg:hidden">
-                    <span className="text-sm font-bold tracking-widest text-brand-gradient">QUANTARA</span>
+                    <span className="text-sm font-bold tracking-widest text-brand-gradient">QUANTALIX</span>
                 </header>
 
                 <main className="flex-1 overflow-y-auto pt-14 pb-24 lg:pt-0 lg:pb-0 p-4 md:p-6 lg:p-10 animate-fade-in">
