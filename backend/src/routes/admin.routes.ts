@@ -339,8 +339,8 @@ router.post('/users/:id/deposit', async (req, res) => {
       if (tier) {
         const cfg = tiers[tier];
         const startedAt = new Date();
-        // Match the on-chain credit flow: endsAt fast-forwarded by durationDays.
-        const endsAt = new Date(startedAt.getTime() + cfg.durationDays * 60 * 1000);
+        // Match the on-chain credit flow: endsAt is durationDays after startedAt.
+        const endsAt = new Date(startedAt.getTime() + cfg.durationDays * 24 * 60 * 60 * 1000);
 
         const cycle = await tx.cycle.create({
           data: {

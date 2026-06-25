@@ -43,7 +43,7 @@ async function main() {
             const cfg = tiers[tier];
             const startedAt = new Date();
             // Fast forward the end date according to duration days
-            const endsAt = new Date(startedAt.getTime() + cfg.durationDays * 60 * 1000);
+            const endsAt = new Date(startedAt.getTime() + cfg.durationDays * 24 * 60 * 60 * 1000);
 
             const cycle = await tx.cycle.create({
                 data: {

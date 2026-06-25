@@ -69,7 +69,7 @@ router.post('/buy', async (req, res) => {
 
       const cfg = tiers[tier];
       const startedAt = new Date();
-      const endsAt = new Date(startedAt.getTime() + cfg.durationDays * 60 * 1000);
+      const endsAt = new Date(startedAt.getTime() + cfg.durationDays * 24 * 60 * 60 * 1000);
 
       const created = await tx.cycle.create({
         data: {
