@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
     TrendingUp, Wallet, Lock, Zap, Users, BarChart3,
-    ArrowRight, RefreshCw, Loader2, Clock, Bell, ArrowDownToLine, ArrowUpFromLine, Megaphone, CheckCircle2, XCircle, Award, Target
+    ArrowRight, RefreshCw, Loader2, Clock, Bell, ArrowDownToLine, ArrowUpFromLine, Megaphone, CheckCircle2, XCircle, Award, Target, FileText
 } from 'lucide-react';
 import { formatUSDT, formatDate, roiPercent, daysLeft, progressPct } from '@/lib/utils';
 
@@ -428,15 +428,16 @@ export default function Dashboard() {
             </div>
 
             {/* Quick links */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {[
                     { to: '/deposit', icon: ArrowRight, label: 'Deposit USDT', desc: 'Fund your account' },
                     { to: '/withdraw', icon: Wallet, label: 'Withdraw', desc: 'Cash out earnings' },
                     { to: '/cycles', icon: RefreshCw, label: 'Cycle History', desc: 'View all cycles' },
                     { to: '/referrals', icon: Users, label: 'Referrals', desc: 'Invite & earn 8%' },
-                ].map(({ to, icon: Icon, label, desc }) => (
-                    <Link key={label} to={to}>
-                        <Card className="hover:border-primary/30 hover:bg-accent transition-all duration-150 cursor-pointer group">
+                    { to: '/quantalix-guide.pdf', icon: FileText, label: 'PDF Guide', desc: 'Platform handbook', external: true },
+                ].map(({ to, icon: Icon, label, desc, external }) => {
+                    const cardInner = (
+                        <Card className="h-full hover:border-primary/30 hover:bg-accent transition-all duration-150 cursor-pointer group">
                             <CardContent className="p-4 flex flex-col items-center text-center gap-2">
                                 <div className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                                     <Icon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -447,8 +448,18 @@ export default function Dashboard() {
                                 </div>
                             </CardContent>
                         </Card>
-                    </Link>
-                ))}
+                    );
+
+                    return external ? (
+                        <a key={label} href={to} target="_blank" rel="noopener noreferrer">
+                            {cardInner}
+                        </a>
+                    ) : (
+                        <Link key={label} to={to}>
+                            {cardInner}
+                        </Link>
+                    );
+                })}
             </div>
         </div>
     );

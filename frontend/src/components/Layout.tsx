@@ -13,6 +13,7 @@ import {
     X,
     ChevronRight,
     Shield,
+    FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -81,6 +82,19 @@ export default function Layout() {
                 {navItems.map((item) => (
                     <NavItem key={item.to} {...item} />
                 ))}
+
+                {/* PDF Guide (static asset, opens in new tab) */}
+                <a
+                    href="/quantalix-guide.pdf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setSidebarOpen(false)}
+                    className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all duration-150 hover:bg-accent hover:text-foreground"
+                >
+                    <FileText className="h-4 w-4 flex-shrink-0" />
+                    <span>PDF Guide</span>
+                    <ChevronRight className="ml-auto h-3 w-3 opacity-0 transition-opacity group-hover:opacity-50" />
+                </a>
 
                 {user?.isAdmin && (
                     <>
