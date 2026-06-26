@@ -192,6 +192,12 @@ export const api = {
         retryWithdrawal: (id: string) =>
             request<{ withdrawal: Withdrawal }>(`/admin/withdrawals/${id}/retry`, { method: 'POST' }),
 
+        approveWithdrawal: (id: string) =>
+            request<{ withdrawal: Withdrawal }>(`/admin/withdrawals/${id}/approve`, { method: 'POST' }),
+
+        cancelWithdrawal: (id: string) =>
+            request<{ withdrawal: Withdrawal }>(`/admin/withdrawals/${id}/cancel`, { method: 'POST' }),
+
         settings: () => request<{ tiers: TierConfig; settings: Setting[] }>('/admin/settings'),
 
         saveTiers: (tiers: TierConfig) =>
@@ -238,7 +244,7 @@ export interface Withdrawal {
     amount: string;
     fee: string;
     netAmount: string;
-    status: 'PENDING' | 'SIGNED' | 'BROADCAST' | 'CONFIRMED' | 'FAILED';
+    status: 'PENDING' | 'APPROVED' | 'SIGNED' | 'BROADCAST' | 'CONFIRMED' | 'FAILED' | 'CANCELLED';
     txHash?: string | null;
     error?: string | null;
     createdAt: string;

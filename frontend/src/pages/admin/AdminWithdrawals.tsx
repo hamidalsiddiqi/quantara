@@ -8,14 +8,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatUSDT, formatDate, shortAddress } from '@/lib/utils';
 import { toast } from '@/components/ui/use-toast';
-import { Loader2, ArrowUpFromLine, RotateCcw } from 'lucide-react';
+import { Loader2, ArrowUpFromLine, RotateCcw, CheckCircle2, XCircle } from 'lucide-react';
 
 const statusMap: Record<string, { label: string; variant: any }> = {
     PENDING: { label: 'Pending', variant: 'warning' },
+    APPROVED: { label: 'Approved', variant: 'info' },
     SIGNED: { label: 'Signed', variant: 'info' },
     BROADCAST: { label: 'Broadcast', variant: 'info' },
     CONFIRMED: { label: 'Confirmed', variant: 'success' },
     FAILED: { label: 'Failed', variant: 'destructive' },
+    CANCELLED: { label: 'Cancelled', variant: 'outline' },
 };
 
 function WithdrawalTable({ status }: { status?: string }) {
@@ -30,6 +32,24 @@ function WithdrawalTable({ status }: { status?: string }) {
         mutationFn: api.admin.retryWithdrawal,
         onSuccess: () => {
             toast({ title: 'Withdrawal queued for retry', variant: 'success' });
+            qc.invalidateQueries({ queryKey: ['admin-withdrawals'] });
+        },
+        onError: (e: any) => toast({ title: e.message, variant: 'destructive' }),
+    });
+
+    const approveMutation = useMutation({
+        mutationFn: api.admin.approveWithdrawal,
+        onSuccess: () => {
+            toast({ title: 'Withdrawal approved — processing on-chain', variant: 'success' });
+            qc.invalidateQueries({ queryKey: ['admin-withdrawals'] });
+        },
+        onError: (e: any) => toast({ title: e.message, variant: 'destructive' }),
+    });
+
+    const cancelMutation = useMutation({
+        mutationFn: api.admin.cancelWithdrawal,
+        onSuccess: () => {
+            toast({ title: 'Withdrawal cancelled', variant: 'success' });
             qc.invalidateQueries({ queryKey: ['admin-withdrawals'] });
         },
         onError: (e: any) => toast({ title: e.message, variant: 'destructive' }),
@@ -96,6 +116,29 @@ function WithdrawalTable({ status }: { status?: string }) {
                             </TableCell>
                             <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">{formatDate(w.createdAt)}</TableCell>
                             <TableCell>
+                                {w.status === 'PENDING' && (
+                                    <div className="flex gap-2">
+                                        <Button
+                                            size="sm"
+                                            className="h-7 text-xs gap-1"
+                                            disabled={approveMutation.isPending || cancelMutation.isPending}
+                                            onClick={() => approveMutation.mutate(w.id)}
+                                        >
+                                            <CheckCircle2 className="h-3 w-3" />
+                                            Approve
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="destructive"
+                                            className="h-7 text-xs gap-1"
+                                            disabled={approveMutation.isPending || cancelMutation.isPending}
+                                            onClick={() => cancelMutation.mutate(w.id)}
+                                        >
+                                            <XCircle className="h-3 w-3" />
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                )}
                                 {w.status === 'FAILED' && (
                                     <Button
                                         size="sm"

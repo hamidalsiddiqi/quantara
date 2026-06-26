@@ -141,10 +141,12 @@ model Deposit {
 
 enum WithdrawStatus {
   PENDING
+  APPROVED
   SIGNED
   BROADCAST
   CONFIRMED
   FAILED
+  CANCELLED
 }
 
 model Withdrawal {

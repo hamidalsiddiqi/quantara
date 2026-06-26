@@ -21,7 +21,7 @@ export async function getWithdrawableBalance(
       _sum: { amount: true },
     }),
     client.withdrawal.aggregate({
-      where: { userId, status: { in: ['PENDING', 'SIGNED', 'BROADCAST', 'CONFIRMED'] } },
+      where: { userId, status: { in: ['PENDING', 'APPROVED', 'SIGNED', 'BROADCAST', 'CONFIRMED'] } },
       _sum: { amount: true },
     }),
     client.user.findUnique({

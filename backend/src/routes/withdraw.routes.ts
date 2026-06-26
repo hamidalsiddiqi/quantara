@@ -18,7 +18,7 @@ const WITHDRAW_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 /// Statuses that count against the once-per-24h limit. A FAILED request moved no
 /// funds, so it does not lock the account out — the user may retry immediately.
-const COOLDOWN_STATUSES = ['PENDING', 'SIGNED', 'BROADCAST', 'CONFIRMED'] as const;
+const COOLDOWN_STATUSES = ['PENDING', 'APPROVED', 'SIGNED', 'BROADCAST', 'CONFIRMED'] as const;
 
 /// Returns the timestamp at which the user may submit their next withdrawal,
 /// or null if they are not currently within a cooldown window. Pass a Prisma

@@ -56,7 +56,7 @@ router.get('/users', async (_req, res) => {
     }),
     prisma.withdrawal.groupBy({
       by: ['userId'],
-      where: { userId: { in: userIds }, status: { in: ['PENDING', 'SIGNED', 'BROADCAST', 'CONFIRMED'] } },
+      where: { userId: { in: userIds }, status: { in: ['PENDING', 'APPROVED', 'SIGNED', 'BROADCAST', 'CONFIRMED'] } },
       _sum: { amount: true },
     }),
     prisma.deposit.groupBy({
@@ -216,6 +216,49 @@ router.post('/withdrawals/:id/retry', async (req, res) => {
   const updated = await prisma.withdrawal.update({
     where: { id },
     data: { status: 'PENDING', error: null, processedAt: null },
+  });
+  res.json({ withdrawal: updated });
+});
+
+// Approve a pending withdrawal: moves it to APPROVED so the withdraw processor
+// picks it up and broadcasts it on-chain. Only PENDING withdrawals can be
+// approved — once APPROVED the worker owns the row, so we don't race it here.
+router.post('/withdrawals/:id/approve', async (req, res) => {
+  const id = req.params.id;
+  const w = await prisma.withdrawal.findUnique({ where: { id } });
+  if (!w) {
+    res.status(404).json({ error: 'not found' });
+    return;
+  }
+  if (w.status !== 'PENDING') {
+    res.status(400).json({ error: `cannot approve withdrawal in status ${w.status}` });
+    return;
+  }
+  const updated = await prisma.withdrawal.update({
+    where: { id },
+    data: { status: 'APPROVED', error: null },
+  });
+  res.json({ withdrawal: updated });
+});
+
+// Cancel a pending withdrawal. CANCELLED is excluded from every "held balance"
+// query, so the held amount is automatically freed back to the user. Only
+// PENDING withdrawals can be cancelled — after approval funds may already be
+// moving on-chain.
+router.post('/withdrawals/:id/cancel', async (req, res) => {
+  const id = req.params.id;
+  const w = await prisma.withdrawal.findUnique({ where: { id } });
+  if (!w) {
+    res.status(404).json({ error: 'not found' });
+    return;
+  }
+  if (w.status !== 'PENDING') {
+    res.status(400).json({ error: `cannot cancel withdrawal in status ${w.status}` });
+    return;
+  }
+  const updated = await prisma.withdrawal.update({
+    where: { id },
+    data: { status: 'CANCELLED', processedAt: new Date() },
   });
   res.json({ withdrawal: updated });
 });

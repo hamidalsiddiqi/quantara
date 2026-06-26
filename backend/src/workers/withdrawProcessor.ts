@@ -36,7 +36,7 @@ async function hasSufficientBalance(userId: string, withdrawalId: string, amount
       where: {
         userId,
         id: { not: withdrawalId },
-        status: { in: ['PENDING', 'SIGNED', 'BROADCAST', 'CONFIRMED'] },
+        status: { in: ['PENDING', 'APPROVED', 'SIGNED', 'BROADCAST', 'CONFIRMED'] },
       },
       _sum: { amount: true },
     }),
@@ -51,7 +51,7 @@ async function hasSufficientBalance(userId: string, withdrawalId: string, amount
 
 async function processPending(): Promise<void> {
   const pending = await prisma.withdrawal.findMany({
-    where: { status: 'PENDING' },
+    where: { status: 'APPROVED' },
     orderBy: { createdAt: 'asc' },
     take: 10,
   });
