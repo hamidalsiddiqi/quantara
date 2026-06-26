@@ -71,10 +71,10 @@ function WithdrawalTable({ status }: { status?: string }) {
             <TableHeader>
                 <TableRow>
                     <TableHead>User</TableHead>
-                    <TableHead>To Address</TableHead>
+                    <TableHead className="hidden sm:table-cell">To Address</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead className="hidden sm:table-cell">Fee</TableHead>
-                    <TableHead>Net Sent</TableHead>
+                    <TableHead className="hidden md:table-cell">Net Sent</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="hidden md:table-cell">Tx Hash</TableHead>
                     <TableHead className="hidden lg:table-cell">Date</TableHead>
@@ -92,10 +92,10 @@ function WithdrawalTable({ status }: { status?: string }) {
                                     <p className="text-xs text-muted-foreground">{w.user.email}</p>
                                 </div>
                             </TableCell>
-                            <TableCell className="font-mono text-xs">{shortAddress(w.toAddress)}</TableCell>
+                            <TableCell className="hidden sm:table-cell font-mono text-xs">{shortAddress(w.toAddress)}</TableCell>
                             <TableCell className="font-medium">{formatUSDT(w.amount)}</TableCell>
                             <TableCell className="hidden sm:table-cell text-muted-foreground">{formatUSDT(w.fee)}</TableCell>
-                            <TableCell className="font-medium">{formatUSDT(w.netAmount)}</TableCell>
+                            <TableCell className="hidden md:table-cell font-medium">{formatUSDT(w.netAmount)}</TableCell>
                             <TableCell>
                                 <div>
                                     <Badge variant={s.variant}>{s.label}</Badge>
@@ -117,10 +117,10 @@ function WithdrawalTable({ status }: { status?: string }) {
                             <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">{formatDate(w.createdAt)}</TableCell>
                             <TableCell>
                                 {w.status === 'PENDING' && (
-                                    <div className="flex gap-2">
+                                    <div className="flex flex-col gap-2 lg:flex-row">
                                         <Button
                                             size="sm"
-                                            className="h-7 text-xs gap-1"
+                                            className="h-7 w-full text-xs gap-1 lg:w-auto"
                                             disabled={approveMutation.isPending || cancelMutation.isPending}
                                             onClick={() => approveMutation.mutate(w.id)}
                                         >
@@ -130,7 +130,7 @@ function WithdrawalTable({ status }: { status?: string }) {
                                         <Button
                                             size="sm"
                                             variant="destructive"
-                                            className="h-7 text-xs gap-1"
+                                            className="h-7 w-full text-xs gap-1 lg:w-auto"
                                             disabled={approveMutation.isPending || cancelMutation.isPending}
                                             onClick={() => cancelMutation.mutate(w.id)}
                                         >
